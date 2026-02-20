@@ -2,9 +2,9 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/nebubox-logo-text-dark.svg" />
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/nebubox-logo-text-light.svg" />
-    <img src="docs/assets/nebubox-logo-text-light.svg" alt="Nebubox Logo" width="300" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/luixaviles/nebubox/main/docs/assets/nebubox-logo-text-dark.svg" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/luixaviles/nebubox/main/docs/assets/nebubox-logo-text-light.svg" />
+    <img src="https://raw.githubusercontent.com/luixaviles/nebubox/main/docs/assets/nebubox-logo-text-dark.svg" alt="Nebubox Logo" width="300" />
   </picture>
 </p>
 
@@ -111,7 +111,7 @@ Each tool has a **profile** that defines its install method, auth directory, and
 Containers are named `nebubox-<tool>-<project-dir>` and labeled for easy filtering.
 
 <div align="center">
-  <img src="docs/assets/nebubox-architecture.svg" alt="Nebubox Architecture" width="720" />
+  <img src="https://raw.githubusercontent.com/luixaviles/nebubox/main/docs/assets/nebubox-architecture.svg" alt="Nebubox Architecture" width="720" />
   <br />
   <em>Architecture diagram: nebubox mounts your project directory only – the rest of the host filesystem stays invisible</em>
 </div>
