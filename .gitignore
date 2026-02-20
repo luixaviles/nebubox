@@ -1,0 +1,31 @@
+# Project notes
+notes/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Environment variables
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# npm
+*.tgz
+npm-debug.log*
+
+# Logs
+*.log
