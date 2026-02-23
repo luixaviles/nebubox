@@ -23,6 +23,12 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Jekyll (docs site)
+docs/_site/
+docs/.jekyll-cache/
+docs/Gemfile
+docs/Gemfile.lock
+
 # npm
 *.tgz
 npm-debug.log*

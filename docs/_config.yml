@@ -1,0 +1,8 @@
+title: Nebubox
+description: Run AI coding CLI tools safely inside Docker containers
+theme: jekyll-theme-cayman
+url: "https://luixaviles.github.io"
+baseurl: "/nebubox"
+repository: luixaviles/nebubox
+plugins:
+  - jekyll-seo-tag
