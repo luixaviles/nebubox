@@ -126,10 +126,20 @@ describe('generateDockerfile with github', () => {
     expect(copyIndex).toBeLessThan(userIndex);
   });
 
+  it('sets GIT_CONFIG_GLOBAL after USER coder', () => {
+    const df = generateDockerfile(mockProfile, { github: true });
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    const envIndex = df.indexOf('GIT_CONFIG_GLOBAL=');
+    expect(envIndex).toBeGreaterThan(-1);
+    expect(envIndex).toBeGreaterThan(userIndex);
+    expect(df).toContain(`GIT_CONFIG_GLOBAL="${CODER_HOME}/.config/gh/.gitconfig"`);
+  });
+
   it('does not include gh install when github is not set', () => {
     const df = generateDockerfile(mockProfile);
     expect(df).not.toContain('githubcli-archive-keyring.gpg');
     expect(df).not.toContain('COPY nebubox-gh-setup');
+    expect(df).not.toContain('GIT_CONFIG_GLOBAL');
   });
 });
 

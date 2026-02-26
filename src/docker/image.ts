@@ -68,6 +68,15 @@ export function generateDockerfile(profile: ToolProfile, options?: ImageOptions)
   lines.push(`WORKDIR ${CODER_HOME}`);
   lines.push('');
 
+  // Point git at a config file inside the mounted gh dir so that
+  // git config --global writes survive container restarts.  Using an
+  // env var avoids a file bind mount on ~/.gitconfig which breaks
+  // git's atomic write (rename) pattern ("Device or resource busy").
+  if (github) {
+    lines.push(`ENV GIT_CONFIG_GLOBAL="${CODER_HOME}/.config/gh/.gitconfig"`);
+    lines.push('');
+  }
+
   // Configure npm global installs under home directory.
   // Use ARG (not ENV) for NPM_CONFIG_PREFIX so it is available at build time
   // but NOT at runtime — some tools (e.g. Gemini CLI) re-exec themselves after

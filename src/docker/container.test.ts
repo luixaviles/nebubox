@@ -178,14 +178,14 @@ describe('createContainer per provider', () => {
 });
 
 describe('createContainer with github', () => {
-  it('adds 2 extra volume mounts for github auth and gitconfig', () => {
+  it('adds 1 extra volume mount for github auth dir', () => {
     vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
     createContainer(mockProfile, '/home/user/proj', { github: true });
 
     const args = vi.mocked(dockerExec).mock.calls[0][0];
     const vCount = args.filter((a: string) => a === '-v').length;
-    // project + authDir + github auth + gitconfig = 4
-    const expected = 2 + mockProfile.authFiles.length + 2;
+    // project + authDir + github auth dir = 3
+    const expected = 2 + mockProfile.authFiles.length + 1;
     expect(vCount).toBe(expected);
   });
 
@@ -197,16 +197,6 @@ describe('createContainer with github', () => {
     const vArgs = args.filter((_: string, i: number) => args[i - 1] === '-v');
     const ghMount = vArgs.find((v: string) => v.includes(`${CODER_HOME}/.config/gh`));
     expect(ghMount).toBeDefined();
-  });
-
-  it('mounts .gitconfig to /home/coder/.gitconfig', () => {
-    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
-    createContainer(mockProfile, '/home/user/proj', { github: true });
-
-    const args = vi.mocked(dockerExec).mock.calls[0][0];
-    const vArgs = args.filter((_: string, i: number) => args[i - 1] === '-v');
-    const gitconfigMount = vArgs.find((v: string) => v.includes(`${CODER_HOME}/.gitconfig`));
-    expect(gitconfigMount).toBeDefined();
   });
 
   it('uses github image name', () => {

@@ -95,16 +95,18 @@ export function createContainer(
     createArgs.push('-v', `${hostFile}:${containerFile}`);
   }
 
-  // GitHub CLI: mount gh config dir and .gitconfig
+  // GitHub CLI: mount gh config dir (contains .gitconfig too)
   if (github) {
     const ghAuthDir = ensureAuthDir('github');
     createArgs.push('-v', `${ghAuthDir}:${CODER_HOME}/.config/gh`);
 
+    // Ensure .gitconfig exists inside the mounted dir so git can find it.
+    // GIT_CONFIG_GLOBAL (set in the image) points here, avoiding a
+    // file bind mount which breaks git's atomic write pattern.
     const gitconfigPath = join(ghAuthDir, '.gitconfig');
     if (!existsSync(gitconfigPath)) {
       writeFileSync(gitconfigPath, '');
     }
-    createArgs.push('-v', `${gitconfigPath}:${CODER_HOME}/.gitconfig`);
   }
 
   createArgs.push('-w', WORKSPACE_DIR, imageName);
