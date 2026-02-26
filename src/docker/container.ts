@@ -1,4 +1,5 @@
-import { basename } from 'node:path';
+import { existsSync, writeFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import type { ToolProfile } from '../config/tools.js';
 import {
   CONTAINER_PREFIX,
@@ -13,6 +14,10 @@ import { ensureAuthDir, ensureAuthFile } from '../config/paths.js';
 import { dockerExec, dockerInteractive } from './client.js';
 import { getImageName } from './image.js';
 import { ContainerError } from '../utils/errors.js';
+
+export interface ContainerOptions {
+  github?: boolean;
+}
 
 export interface ContainerInfo {
   name: string;
@@ -63,9 +68,11 @@ export function isContainerRunning(name: string): boolean {
 export function createContainer(
   profile: ToolProfile,
   projectPath: string,
+  options?: ContainerOptions,
 ): string {
+  const github = options?.github ?? false;
   const name = getContainerName(profile.name, projectPath);
-  const imageName = getImageName(profile.name);
+  const imageName = getImageName(profile.name, github);
   const hostAuthDir = ensureAuthDir(profile.name);
   const containerAuthDir = `${CODER_HOME}/${profile.authDir}`;
   const projectBasename = basename(projectPath);
@@ -86,6 +93,18 @@ export function createContainer(
     const hostFile = ensureAuthFile(authFile);
     const containerFile = `${CODER_HOME}/${authFile}`;
     createArgs.push('-v', `${hostFile}:${containerFile}`);
+  }
+
+  // GitHub CLI: mount gh config dir and .gitconfig
+  if (github) {
+    const ghAuthDir = ensureAuthDir('github');
+    createArgs.push('-v', `${ghAuthDir}:${CODER_HOME}/.config/gh`);
+
+    const gitconfigPath = join(ghAuthDir, '.gitconfig');
+    if (!existsSync(gitconfigPath)) {
+      writeFileSync(gitconfigPath, '');
+    }
+    createArgs.push('-v', `${gitconfigPath}:${CODER_HOME}/.gitconfig`);
   }
 
   createArgs.push('-w', WORKSPACE_DIR, imageName);

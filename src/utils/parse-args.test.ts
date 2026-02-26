@@ -47,4 +47,16 @@ describe('parseArgs', () => {
     expect(result.command).toBe('start');
     expect(result.args).toEqual(['a', 'b', 'c']);
   });
+
+  it('parses --github as a boolean flag', () => {
+    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--tool', 'claude', '--github']);
+    expect(result.flags['github']).toBe('true');
+  });
+
+  it('parses --github alongside other flags', () => {
+    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--github', '--no-cache', '--tool', 'claude']);
+    expect(result.flags['github']).toBe('true');
+    expect(result.flags['no-cache']).toBe('true');
+    expect(result.flags['tool']).toBe('claude');
+  });
 });

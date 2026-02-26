@@ -27,6 +27,7 @@ src/
   commands/   # CLI command implementations
   config/     # Constants, tool profiles, path helpers
   docker/     # Docker client, image builder, container management
+  github/     # GitHub CLI setup script and .bashrc hook
   utils/      # Arg parsing, validation, logging, error helpers
   index.ts    # Entry point
 scripts/e2e/  # End-to-end test scripts (bash + Docker)

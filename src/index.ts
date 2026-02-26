@@ -25,24 +25,26 @@ USAGE
   nebubox <command> [options]
 
 COMMANDS
-  start <path> [--tool <name>] [--no-cache] [--recreate]   Create/start container and attach shell
+  start <path> [--tool <name>] [--no-cache] [--recreate] [--github]   Create/start container and attach shell
   list [--tool <name>]           List managed containers
   stop <name>                    Stop a running container
   attach <name>                  Attach to a running container
   remove <name>                  Remove a container
-  build [<tool>] [--tool <name>] [--no-cache]   Build (or rebuild) a tool's Docker image
+  build [<tool>] [--tool <name>] [--no-cache] [--github]   Build (or rebuild) a tool's Docker image
 
 OPTIONS
   --tool <name>    Tool to use (interactive prompt if omitted)
                    Available: ${tools}
   --no-cache       Skip Docker cache when building images
   --recreate       Remove and recreate existing container
+  --github         Install GitHub CLI and persist auth across sessions
   --help, -h       Show this help message
   --version, -v    Show version
 
 EXAMPLES
   nebubox start ./my-project
   nebubox start ./my-project --tool gemini
+  nebubox start ./my-project --tool claude --github
   nebubox list
   nebubox list --tool claude
   nebubox stop nebubox-claude-my-project
@@ -80,7 +82,7 @@ async function main(): Promise<void> {
           process.exit(1);
         }
         const startTool = flags['tool'] ?? await promptToolSelection();
-        await startCommand({ path, tool: startTool, noCache: flags['no-cache'] === 'true', recreate: flags['recreate'] === 'true' });
+        await startCommand({ path, tool: startTool, noCache: flags['no-cache'] === 'true', recreate: flags['recreate'] === 'true', github: flags['github'] === 'true' });
         break;
       }
 
@@ -124,7 +126,7 @@ async function main(): Promise<void> {
 
       case 'build': {
         const buildTool = args[0] ?? flags['tool'] ?? await promptToolSelection();
-        await buildCommand({ tool: buildTool, noCache: flags['no-cache'] === 'true' });
+        await buildCommand({ tool: buildTool, noCache: flags['no-cache'] === 'true', github: flags['github'] === 'true' });
         break;
       }
 

@@ -38,6 +38,9 @@ nebubox start ./my-project
 nebubox start ./my-project --tool claude
 nebubox start ./my-project --tool gemini
 nebubox start ./my-project --tool codex
+
+# Start with GitHub CLI support
+nebubox start ./my-project --tool claude --github
 ```
 
 This will:
@@ -65,6 +68,7 @@ Containers are named `nebubox-<tool>-<project-dir>` and labeled for easy filteri
     claude/         # Claude Code credentials & config
     gemini/         # Gemini CLI credentials
     codex/          # Codex CLI credentials
+    github/         # GitHub CLI auth + .gitconfig (when --github is used)
 ```
 
 ## Links

@@ -21,11 +21,19 @@ vi.mock('./client.js', () => ({
 }));
 
 vi.mock('./image.js', () => ({
-  getImageName: vi.fn((tool: string) => `nebubox-${tool}:latest`),
+  getImageName: vi.fn((tool: string, github?: boolean) => {
+    const suffix = github ? '-github' : '';
+    return `nebubox-${tool}${suffix}:latest`;
+  }),
+}));
+
+vi.mock('node:fs', () => ({
+  existsSync: vi.fn(() => false),
+  writeFileSync: vi.fn(),
 }));
 
 vi.mock('../config/paths.js', () => ({
-  ensureAuthDir: vi.fn(() => '/tmp/fake-auth-dir'),
+  ensureAuthDir: vi.fn((name: string) => `/tmp/fake-auth-dir/${name}`),
   ensureAuthFile: vi.fn((name: string) => `/tmp/fake-auth/${name}`),
 }));
 
@@ -166,6 +174,49 @@ describe('createContainer per provider', () => {
     const vCount = args.filter((a: string) => a === '-v').length;
     // Only project mount + authDir mount, no authFile mounts
     expect(vCount).toBe(2);
+  });
+});
+
+describe('createContainer with github', () => {
+  it('adds 2 extra volume mounts for github auth and gitconfig', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { github: true });
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const vCount = args.filter((a: string) => a === '-v').length;
+    // project + authDir + github auth + gitconfig = 4
+    const expected = 2 + mockProfile.authFiles.length + 2;
+    expect(vCount).toBe(expected);
+  });
+
+  it('mounts gh config dir to /home/coder/.config/gh', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { github: true });
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const vArgs = args.filter((_: string, i: number) => args[i - 1] === '-v');
+    const ghMount = vArgs.find((v: string) => v.includes(`${CODER_HOME}/.config/gh`));
+    expect(ghMount).toBeDefined();
+  });
+
+  it('mounts .gitconfig to /home/coder/.gitconfig', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { github: true });
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const vArgs = args.filter((_: string, i: number) => args[i - 1] === '-v');
+    const gitconfigMount = vArgs.find((v: string) => v.includes(`${CODER_HOME}/.gitconfig`));
+    expect(gitconfigMount).toBeDefined();
+  });
+
+  it('uses github image name', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { github: true });
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    // The last arg is the image name
+    const lastArg = args[args.length - 1];
+    expect(lastArg).toContain('-github:latest');
   });
 });
 
