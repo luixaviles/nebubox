@@ -15,26 +15,41 @@ fi
 # Install GitHub credential helper
 gh auth setup-git
 
-# Fetch name from GitHub profile
-name="$(gh api user --jq '.name // .login' 2>/dev/null || true)"
+# Fetch user profile (works with default gh auth scopes)
+login=""
+name=""
+user_id=""
+if user_out="$(gh api user --jq '[.login, (.name // .login), (.id | tostring)] | join("\\n")' 2>/dev/null)"; then
+  login="$(echo "$user_out" | sed -n '1p')"
+  name="$(echo "$user_out" | sed -n '2p')"
+  user_id="$(echo "$user_out" | sed -n '3p')"
+fi
+
 if [ -n "$name" ]; then
   git config --global user.name "$name"
 fi
 
-# Fetch primary email (requires read:user or user:email scope)
-email="$(gh api user/emails --jq '[.[] | select(.primary)] | .[0].email // empty' 2>/dev/null || true)"
+# Try the emails endpoint first (requires user:email scope).
+# Fall back to the GitHub noreply address which works with default scopes
+# and is GitHub's recommended format for commit attribution.
+email=""
+if email_out="$(gh api user/emails --jq '[.[] | select(.primary)] | .[0].email // empty' 2>/dev/null)"; then
+  email="$email_out"
+fi
+if [ -z "$email" ] && [ -n "$user_id" ] && [ -n "$login" ]; then
+  email="\${user_id}+\${login}@users.noreply.github.com"
+fi
 if [ -n "$email" ]; then
   git config --global user.email "$email"
 fi
 
-if [ -n "$name" ] || [ -n "$email" ]; then
-  echo "nebubox-gh-setup: git configured as $name <$email>"
-  echo "  Override with: git config --global user.name 'Your Name'"
-else
-  echo "nebubox-gh-setup: could not fetch GitHub profile info. Set git identity manually:"
-  echo "  git config --global user.name 'Your Name'"
-  echo "  git config --global user.email 'you@example.com'"
-fi
+echo "nebubox-gh-setup: git identity configured:"
+echo "  user.name  = \${name:-(not set)}"
+echo "  user.email = \${email:-(not set)}"
+echo ""
+echo "  To change, run:"
+echo "    git config --global user.name 'Your Name'"
+echo "    git config --global user.email 'you@example.com'"
 `;
 
 /**
