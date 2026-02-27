@@ -179,6 +179,56 @@ nebubox stop nebubox-claude-frontend
 nebubox remove nebubox-claude-frontend
 ```
 
+## Advanced
+
+### GitHub CLI Integration (`--github`)
+
+> Introduced in v0.2.0 — feedback welcome.
+
+The `--github` flag installs [GitHub CLI](https://cli.github.com/) (`gh`) in the container and wires up credential and git identity persistence. This lets AI tools create PRs, push branches, and interact with the GitHub API from inside the sandbox.
+
+**What it does:**
+
+- Builds a **separate image** tagged `nebubox-<tool>-github:latest` (your regular image is untouched)
+- Installs `gh` from the official apt repository
+- Mounts `~/.nebubox/auth/github/` for credential and `.gitconfig` persistence across container rebuilds
+- Auto-configures `git user.name` and `git user.email` from your GitHub account on every new shell session
+
+**First-use workflow:**
+
+```bash
+# 1. Start with --github
+nebubox start ./my-project --tool claude --github
+
+# 2. Inside the container, authenticate once
+gh auth login
+
+# 3. Exit and re-attach (or open a new shell) —
+#    git identity is automatically configured
+exit
+nebubox attach nebubox-claude-github-my-project
+```
+
+After the initial `gh auth login`, credentials persist on the host at `~/.nebubox/auth/github/`. All future containers started with `--github` reuse them automatically — no repeated login needed.
+
+**Email scope:** The setup script tries to fetch your primary email via the GitHub API (requires the `user:email` scope). If the scope is not granted, it falls back to your GitHub noreply address (`<id>+<login>@users.noreply.github.com`). To use your real email, authorize the `user:email` scope during `gh auth login`.
+
+**Pre-building the image:**
+
+```bash
+# Build the GitHub-enabled image ahead of time
+nebubox build claude --github
+```
+
+**Overriding git identity:** The auto-configured identity can be changed at any time inside the container:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+These overrides persist across container restarts because `.gitconfig` lives in the mounted volume.
+
 ## Development
 
 ```bash

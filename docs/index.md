@@ -71,6 +71,12 @@ Containers are named `nebubox-<tool>-<project-dir>` and labeled for easy filteri
     github/         # GitHub CLI auth + .gitconfig (when --github is used)
 ```
 
+## GitHub CLI Integration
+
+Pass `--github` to install [GitHub CLI](https://cli.github.com/) in the container with persistent credentials. After a one-time `gh auth login`, your git identity is automatically configured from your GitHub account, and AI tools can create PRs, push branches, and call the GitHub API from inside the sandbox.
+
+See the [Advanced section in the README](https://github.com/luixaviles/nebubox#advanced) for the full setup guide.
+
 ## Links
 
 - [GitHub Repository](https://github.com/luixaviles/nebubox)
