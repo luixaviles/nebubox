@@ -9,8 +9,9 @@ import {
   removeContainer,
   attachContainer,
   listContainers,
+  getContainerImage,
 } from './container.js';
-import { CONTAINER_PREFIX, CODER_HOME, LABEL_MANAGED, LABEL_TOOL } from '../config/constants.js';
+import { CONTAINER_PREFIX, CODER_HOME, LABEL_MANAGED, LABEL_TOOL, LABEL_GITHUB } from '../config/constants.js';
 import { ContainerError } from '../utils/errors.js';
 import type { ToolProfile } from '../config/tools.js';
 import { TOOL_PROFILES } from '../config/tools.js';
@@ -21,11 +22,19 @@ vi.mock('./client.js', () => ({
 }));
 
 vi.mock('./image.js', () => ({
-  getImageName: vi.fn((tool: string) => `nebubox-${tool}:latest`),
+  getImageName: vi.fn((tool: string, github?: boolean) => {
+    const suffix = github ? '-github' : '';
+    return `nebubox-${tool}${suffix}:latest`;
+  }),
+}));
+
+vi.mock('node:fs', () => ({
+  existsSync: vi.fn(() => false),
+  writeFileSync: vi.fn(),
 }));
 
 vi.mock('../config/paths.js', () => ({
-  ensureAuthDir: vi.fn(() => '/tmp/fake-auth-dir'),
+  ensureAuthDir: vi.fn((name: string) => `/tmp/fake-auth-dir/${name}`),
   ensureAuthFile: vi.fn((name: string) => `/tmp/fake-auth/${name}`),
 }));
 
@@ -56,7 +65,7 @@ describe('containerExists', () => {
   it('returns ContainerInfo when container is found', () => {
     vi.mocked(dockerExec).mockReturnValue({
       status: 0,
-      stdout: 'nebubox-claude-proj\tUp 2 hours\tclaude\tproj\t/home/user/proj',
+      stdout: 'nebubox-claude-proj\tUp 2 hours\tclaude\tproj\t/home/user/proj\tfalse',
       stderr: '',
     });
 
@@ -67,6 +76,7 @@ describe('containerExists', () => {
       tool: 'claude',
       project: 'proj',
       projectPath: '/home/user/proj',
+      github: 'false',
     });
   });
 
@@ -83,6 +93,14 @@ describe('containerExists', () => {
   it('returns null when output has insufficient parts', () => {
     vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'name\tstatus', stderr: '' });
     expect(containerExists('partial')).toBeNull();
+  });
+
+  it('queries the nebubox.github label', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: '', stderr: '' });
+    containerExists('test');
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const format = args.find((a: string) => a.includes('nebubox.github'));
+    expect(format).toBeDefined();
   });
 });
 
@@ -129,6 +147,22 @@ describe('createContainer', () => {
     const vIndex = args.lastIndexOf('-v');
     expect(args[vIndex + 1]).toContain('.test.json');
   });
+
+  it('sets nebubox.github label to false when github is not enabled', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj');
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    expect(args).toContain(`${LABEL_GITHUB}=false`);
+  });
+
+  it('sets nebubox.github label to true when github is enabled', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { github: true });
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    expect(args).toContain(`${LABEL_GITHUB}=true`);
+  });
 });
 
 describe('createContainer per provider', () => {
@@ -166,6 +200,39 @@ describe('createContainer per provider', () => {
     const vCount = args.filter((a: string) => a === '-v').length;
     // Only project mount + authDir mount, no authFile mounts
     expect(vCount).toBe(2);
+  });
+});
+
+describe('createContainer with github', () => {
+  it('adds 1 extra volume mount for github auth dir', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { github: true });
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const vCount = args.filter((a: string) => a === '-v').length;
+    // project + authDir + github auth dir = 3
+    const expected = 2 + mockProfile.authFiles.length + 1;
+    expect(vCount).toBe(expected);
+  });
+
+  it('mounts gh config dir to /home/coder/.config/gh', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { github: true });
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const vArgs = args.filter((_: string, i: number) => args[i - 1] === '-v');
+    const ghMount = vArgs.find((v: string) => v.includes(`${CODER_HOME}/.config/gh`));
+    expect(ghMount).toBeDefined();
+  });
+
+  it('uses github image name', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { github: true });
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    // The last arg is the image name
+    const lastArg = args[args.length - 1];
+    expect(lastArg).toContain('-github:latest');
   });
 });
 
@@ -221,7 +288,7 @@ describe('listContainers', () => {
   it('returns parsed container list', () => {
     vi.mocked(dockerExec).mockReturnValue({
       status: 0,
-      stdout: 'c1\tUp\tclaude\tproj1\t/p1\nc2\tExited\tgemini\tproj2\t/p2',
+      stdout: 'c1\tUp\tclaude\tproj1\t/p1\tfalse\nc2\tExited\tgemini\tproj2\t/p2\ttrue',
       stderr: '',
     });
 
@@ -233,6 +300,15 @@ describe('listContainers', () => {
       tool: 'claude',
       project: 'proj1',
       projectPath: '/p1',
+      github: 'false',
+    });
+    expect(list[1]).toEqual({
+      name: 'c2',
+      status: 'Exited',
+      tool: 'gemini',
+      project: 'proj2',
+      projectPath: '/p2',
+      github: 'true',
     });
   });
 
@@ -261,5 +337,26 @@ describe('listContainers', () => {
 
     const args = vi.mocked(dockerExec).mock.calls[0][0];
     expect(args).toContain(`label=${LABEL_MANAGED}=true`);
+  });
+
+  it('queries the nebubox.github label', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: '', stderr: '' });
+    listContainers();
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const format = args.find((a: string) => a.includes('nebubox.github'));
+    expect(format).toBeDefined();
+  });
+});
+
+describe('getContainerImage', () => {
+  it('returns image name on success', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'nebubox-claude:latest', stderr: '' });
+    expect(getContainerImage('mycontainer')).toBe('nebubox-claude:latest');
+  });
+
+  it('returns empty string on failure', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 1, stdout: '', stderr: 'err' });
+    expect(getContainerImage('bad')).toBe('');
   });
 });

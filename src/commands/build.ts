@@ -5,7 +5,8 @@ import * as log from '../utils/logger.js';
 
 export interface BuildOptions {
   tool: string;
-  noCache: boolean;
+  rebuild: boolean;
+  github: boolean;
 }
 
 export async function buildCommand(opts: BuildOptions): Promise<void> {
@@ -14,9 +15,11 @@ export async function buildCommand(opts: BuildOptions): Promise<void> {
 
   const profile = getToolProfile(opts.tool)!;
 
-  if (imageExists(profile.name)) {
-    log.info(`Image ${getImageName(profile.name)} already exists. Rebuilding...`);
+  const imageOpts = opts.github ? { github: true } : undefined;
+
+  if (imageExists(profile.name, opts.github)) {
+    log.info(`Image ${getImageName(profile.name, opts.github)} already exists. Rebuilding...`);
   }
 
-  await buildImage(profile, opts.noCache);
+  await buildImage(profile, opts.rebuild, imageOpts);
 }

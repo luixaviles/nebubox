@@ -27,6 +27,14 @@ describe('getImageName', () => {
     expect(getImageName('claude')).toBe(`${IMAGE_PREFIX}claude:latest`);
     expect(getImageName('gemini')).toBe(`${IMAGE_PREFIX}gemini:latest`);
   });
+
+  it('appends -github suffix when github is true', () => {
+    expect(getImageName('claude', true)).toBe(`${IMAGE_PREFIX}claude-github:latest`);
+  });
+
+  it('does not append suffix when github is false', () => {
+    expect(getImageName('claude', false)).toBe(`${IMAGE_PREFIX}claude:latest`);
+  });
 });
 
 describe('generateDockerfile', () => {
@@ -83,6 +91,55 @@ describe('generateDockerfile', () => {
     const df = generateDockerfile(bare);
     expect(df).toContain(`FROM ${BASE_IMAGE}`);
     expect(df).toContain('ENTRYPOINT ["/bin/bash"]');
+  });
+});
+
+describe('generateDockerfile with github', () => {
+  it('includes gh CLI install block when github is true', () => {
+    const df = generateDockerfile(mockProfile, { github: true });
+    expect(df).toContain('/etc/apt/keyrings/githubcli-archive-keyring.gpg');
+    expect(df).toContain('apt-get install -y --no-install-recommends gh');
+  });
+
+  it('includes COPY nebubox-gh-setup before USER coder', () => {
+    const df = generateDockerfile(mockProfile, { github: true });
+    const copyIndex = df.indexOf('COPY nebubox-gh-setup');
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    expect(copyIndex).toBeGreaterThan(-1);
+    expect(userIndex).toBeGreaterThan(-1);
+    expect(copyIndex).toBeLessThan(userIndex);
+  });
+
+  it('appends bashrc hook after USER coder', () => {
+    const df = generateDockerfile(mockProfile, { github: true });
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    const hookIndex = df.indexOf('cat /tmp/nebubox-bashrc-hook');
+    expect(hookIndex).toBeGreaterThan(-1);
+    expect(hookIndex).toBeGreaterThan(userIndex);
+  });
+
+  it('copies bashrc hook file before USER coder', () => {
+    const df = generateDockerfile(mockProfile, { github: true });
+    const copyIndex = df.indexOf('COPY nebubox-bashrc-hook');
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    expect(copyIndex).toBeGreaterThan(-1);
+    expect(copyIndex).toBeLessThan(userIndex);
+  });
+
+  it('sets GIT_CONFIG_GLOBAL after USER coder', () => {
+    const df = generateDockerfile(mockProfile, { github: true });
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    const envIndex = df.indexOf('GIT_CONFIG_GLOBAL=');
+    expect(envIndex).toBeGreaterThan(-1);
+    expect(envIndex).toBeGreaterThan(userIndex);
+    expect(df).toContain(`GIT_CONFIG_GLOBAL="${CODER_HOME}/.config/gh/.gitconfig"`);
+  });
+
+  it('does not include gh install when github is not set', () => {
+    const df = generateDockerfile(mockProfile);
+    expect(df).not.toContain('githubcli-archive-keyring.gpg');
+    expect(df).not.toContain('COPY nebubox-gh-setup');
+    expect(df).not.toContain('GIT_CONFIG_GLOBAL');
   });
 });
 

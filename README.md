@@ -71,6 +71,9 @@ nebubox start ./my-project
 nebubox start ./my-project --tool claude
 nebubox start ./my-project --tool gemini
 nebubox start ./my-project --tool codex
+
+# Start with GitHub CLI support
+nebubox start ./my-project --tool claude --github
 ```
 
 This will:
@@ -85,12 +88,12 @@ When you exit the shell, the container keeps running. Reconnect anytime with `ne
 
 | Command | Description |
 |---------|-------------|
-| `nebubox start <path> [--tool <name>] [--no-cache] [--recreate]` | Create/start container and attach shell |
+| `nebubox start <path> [--tool <name>] [--rebuild] [--github]` | Create/start container and attach shell |
 | `nebubox list [--tool <name>]` | List managed containers |
 | `nebubox stop <name>` | Stop a running container |
 | `nebubox attach <name>` | Attach to a running container |
 | `nebubox remove <name>` | Remove a container |
-| `nebubox build [<tool>] [--tool <name>] [--no-cache]` | Build or rebuild a tool's Docker image |
+| `nebubox build [<tool>] [--tool <name>] [--rebuild] [--github]` | Build or rebuild a tool's Docker image |
 
 ## Supported Tools
 
@@ -125,6 +128,7 @@ Containers are named `nebubox-<tool>-<project-dir>` and labeled for easy filteri
     claude/         # Claude Code credentials & config (~/.claude)
     gemini/         # Gemini CLI credentials
     codex/          # Codex CLI credentials
+    github/         # GitHub CLI auth + .gitconfig (when --github is used)
 ```
 
 ### Auth Persistence
@@ -134,12 +138,15 @@ Nebubox stores each tool's credentials under `~/.nebubox/auth/<tool>/` on the ho
 - **Claude Code** — Nebubox sets `CLAUDE_CONFIG_DIR` to point to the mounted auth directory, so all config (`.claude.json`, `.credentials.json`, settings) lives in a single volume. This avoids [credential conflicts](https://github.com/anthropics/claude-code/issues/1414) between macOS and Linux. Run `claude login` on first use.
 - **Gemini CLI** — Auth is stored in the standard `.gemini` directory. Note that Gemini re-execs itself after login, so `NPM_CONFIG_PREFIX` is set at build-time only to avoid module resolution issues. Run `gemini` and follow the login prompt on first use.
 - **Codex CLI** — Auth is stored in the standard `.codex` directory. Run `codex` and follow the login prompt on first use.
+- **GitHub CLI** (`--github`) — When you pass `--github`, Nebubox installs `gh` in the container image and mounts `~/.nebubox/auth/github/` for credential persistence. Run `gh auth login` on first use. Your git identity (`user.name` and `user.email`) is automatically configured from your GitHub account on the next shell session.
 
-If you need to pick up configuration changes (e.g., after updating nebubox), recreate your containers:
+If you need to pick up configuration changes (e.g., after updating nebubox), rebuild your containers:
 
 ```bash
-nebubox start ./my-project --tool claude --recreate
+nebubox start ./my-project --tool claude --rebuild
 ```
+
+Nebubox also auto-detects when `--github` has changed since the container was created and transparently recreates the container to match.
 
 ## Examples
 
@@ -147,11 +154,14 @@ nebubox start ./my-project --tool claude --recreate
 # Build the Gemini image ahead of time
 nebubox build gemini
 
-# Rebuild without Docker cache
-nebubox build claude --no-cache
+# Rebuild image and recreate container
+nebubox build claude --rebuild
 
-# Recreate container to pick up image or config changes
-nebubox start ./my-project --tool claude --recreate
+# Rebuild to pick up image or config changes
+nebubox start ./my-project --tool claude --rebuild
+
+# Enable GitHub CLI for creating PRs, pushing, etc.
+nebubox start ./my-project --tool claude --github
 
 # Work on two projects with Claude Code
 nebubox start ~/projects/frontend --tool claude
@@ -170,6 +180,56 @@ nebubox attach nebubox-claude-frontend
 nebubox stop nebubox-claude-frontend
 nebubox remove nebubox-claude-frontend
 ```
+
+## Advanced
+
+### GitHub CLI Integration (`--github`)
+
+> Introduced in v0.2.0 — feedback welcome.
+
+The `--github` flag installs [GitHub CLI](https://cli.github.com/) (`gh`) in the container and wires up credential and git identity persistence. This lets AI tools create PRs, push branches, and interact with the GitHub API from inside the sandbox.
+
+**What it does:**
+
+- Builds a **separate image** tagged `nebubox-<tool>-github:latest` (your regular image is untouched)
+- Installs `gh` from the official apt repository
+- Mounts `~/.nebubox/auth/github/` for credential and `.gitconfig` persistence across container rebuilds
+- Auto-configures `git user.name` and `git user.email` from your GitHub account on every new shell session
+
+**First-use workflow:**
+
+```bash
+# 1. Start with --github
+nebubox start ./my-project --tool claude --github
+
+# 2. Inside the container, authenticate once
+gh auth login
+
+# 3. Exit and re-attach (or open a new shell) —
+#    git identity is automatically configured
+exit
+nebubox attach nebubox-claude-github-my-project
+```
+
+After the initial `gh auth login`, credentials persist on the host at `~/.nebubox/auth/github/`. All future containers started with `--github` reuse them automatically — no repeated login needed.
+
+**Email scope:** The setup script tries to fetch your primary email via the GitHub API (requires the `user:email` scope). If the scope is not granted, it falls back to your GitHub noreply address (`<id>+<login>@users.noreply.github.com`). To use your real email, authorize the `user:email` scope during `gh auth login`.
+
+**Pre-building the image:**
+
+```bash
+# Build the GitHub-enabled image ahead of time
+nebubox build claude --github
+```
+
+**Overriding git identity:** The auto-configured identity can be changed at any time inside the container:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+These overrides persist across container restarts because `.gitconfig` lives in the mounted volume.
 
 ## Development
 

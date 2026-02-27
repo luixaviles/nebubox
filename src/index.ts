@@ -15,6 +15,10 @@ import { parseArgs } from './utils/parse-args.js';
 const VERSION = '0.1.0';
 process.title = `nebubox v${VERSION}`;
 
+const KNOWN_FLAGS = new Set([
+  'tool', 'rebuild', 'github', 'help', 'h', 'version', 'v',
+]);
+
 function printHelp(): void {
   const tools = getToolNames().join(', ');
   console.log(`
@@ -25,24 +29,25 @@ USAGE
   nebubox <command> [options]
 
 COMMANDS
-  start <path> [--tool <name>] [--no-cache] [--recreate]   Create/start container and attach shell
+  start <path> [--tool <name>] [--rebuild] [--github]   Create/start container and attach shell
   list [--tool <name>]           List managed containers
   stop <name>                    Stop a running container
   attach <name>                  Attach to a running container
   remove <name>                  Remove a container
-  build [<tool>] [--tool <name>] [--no-cache]   Build (or rebuild) a tool's Docker image
+  build [<tool>] [--tool <name>] [--rebuild] [--github]   Build (or rebuild) a tool's Docker image
 
 OPTIONS
   --tool <name>    Tool to use (interactive prompt if omitted)
                    Available: ${tools}
-  --no-cache       Skip Docker cache when building images
-  --recreate       Remove and recreate existing container
+  --rebuild        Rebuild image (no Docker cache) and recreate container
+  --github         Install GitHub CLI and persist auth across sessions
   --help, -h       Show this help message
   --version, -v    Show version
 
 EXAMPLES
   nebubox start ./my-project
   nebubox start ./my-project --tool gemini
+  nebubox start ./my-project --tool claude --github
   nebubox list
   nebubox list --tool claude
   nebubox stop nebubox-claude-my-project
@@ -50,6 +55,14 @@ EXAMPLES
   nebubox remove nebubox-claude-my-project
   nebubox build --tool codex
 `);
+}
+
+function warnUnknownFlags(flags: Record<string, string>): void {
+  for (const key of Object.keys(flags)) {
+    if (!KNOWN_FLAGS.has(key)) {
+      log.warn(`Unknown flag: --${key} (ignored)`);
+    }
+  }
 }
 
 async function main(): Promise<void> {
@@ -64,6 +77,8 @@ async function main(): Promise<void> {
     console.log(`nebubox v${VERSION}`);
     return;
   }
+
+  warnUnknownFlags(flags);
 
   if (!command) {
     printHelp();
@@ -80,7 +95,7 @@ async function main(): Promise<void> {
           process.exit(1);
         }
         const startTool = flags['tool'] ?? await promptToolSelection();
-        await startCommand({ path, tool: startTool, noCache: flags['no-cache'] === 'true', recreate: flags['recreate'] === 'true' });
+        await startCommand({ path, tool: startTool, rebuild: flags['rebuild'] === 'true', github: flags['github'] === 'true' });
         break;
       }
 
@@ -124,7 +139,7 @@ async function main(): Promise<void> {
 
       case 'build': {
         const buildTool = args[0] ?? flags['tool'] ?? await promptToolSelection();
-        await buildCommand({ tool: buildTool, noCache: flags['no-cache'] === 'true' });
+        await buildCommand({ tool: buildTool, rebuild: flags['rebuild'] === 'true', github: flags['github'] === 'true' });
         break;
       }
 

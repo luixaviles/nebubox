@@ -68,6 +68,18 @@ assert_output_contains "remove shows usage hint" "Usage:" node dist/index.js rem
 assert_exit "no command exits 1" 1 node dist/index.js
 assert_output_contains "no command shows usage" "USAGE" node dist/index.js
 
+# Unknown flag warnings
+assert_output_contains "unknown flag warns" "Unknown flag" node dist/index.js start . --tool claude --badFlag
+assert_output_contains "unknown flag includes flag name" "--badFlag" node dist/index.js start . --tool claude --badFlag
+
+# Known flags should NOT produce unknown flag warnings
+# (--rebuild is known, output should not contain "Unknown flag")
+# We test indirectly: --help with --rebuild should not warn
+assert_exit "--help with --rebuild exits 0" 0 node dist/index.js --help --rebuild
+
+# --no-cache should warn (replaced by --rebuild)
+assert_output_contains "--no-cache warns as unknown" "Unknown flag" node dist/index.js build --tool claude --no-cache
+
 echo ""
 echo "CLI Basics: $PASS passed, $FAIL failed"
 

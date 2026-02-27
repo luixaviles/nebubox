@@ -38,6 +38,9 @@ nebubox start ./my-project
 nebubox start ./my-project --tool claude
 nebubox start ./my-project --tool gemini
 nebubox start ./my-project --tool codex
+
+# Start with GitHub CLI support
+nebubox start ./my-project --tool claude --github
 ```
 
 This will:
@@ -65,7 +68,14 @@ Containers are named `nebubox-<tool>-<project-dir>` and labeled for easy filteri
     claude/         # Claude Code credentials & config
     gemini/         # Gemini CLI credentials
     codex/          # Codex CLI credentials
+    github/         # GitHub CLI auth + .gitconfig (when --github is used)
 ```
+
+## GitHub CLI Integration
+
+Pass `--github` to install [GitHub CLI](https://cli.github.com/) in the container with persistent credentials. After a one-time `gh auth login`, your git identity is automatically configured from your GitHub account, and AI tools can create PRs, push branches, and call the GitHub API from inside the sandbox.
+
+See the [Advanced section in the README](https://github.com/luixaviles/nebubox#advanced) for the full setup guide.
 
 ## Links
 
