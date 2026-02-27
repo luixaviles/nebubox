@@ -1,53 +1,68 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
 
-const CLI = resolve(import.meta.dirname, '..', 'dist', 'index.js');
+vi.mock('./commands/start.js', () => ({ startCommand: vi.fn() }));
+vi.mock('./commands/build.js', () => ({ buildCommand: vi.fn() }));
+vi.mock('./commands/list.js', () => ({ listCommand: vi.fn() }));
+vi.mock('./commands/stop.js', () => ({ stopCommand: vi.fn() }));
+vi.mock('./commands/attach.js', () => ({ attachCommand: vi.fn() }));
+vi.mock('./commands/remove.js', () => ({ removeCommand: vi.fn() }));
+vi.mock('./utils/prompt.js', () => ({ promptToolSelection: vi.fn() }));
 
-function run(...args: string[]): string {
-  try {
-    return execFileSync('node', [CLI, ...args], {
-      encoding: 'utf-8',
-      timeout: 5000,
-    });
-  } catch (err: any) {
-    // CLI may exit non-zero; we still want stdout+stderr
-    return (err.stdout ?? '') + (err.stderr ?? '');
-  }
-}
+import { main } from './cli.js';
+import * as log from './utils/logger.js';
 
 describe('unknown flag warnings', () => {
-  it('warns about unknown flags', () => {
-    const output = run('start', '.', '--tool', 'claude', '--badFlag');
-    expect(output).toContain('Unknown flag');
-    expect(output).toContain('--badFlag');
+  let savedArgv: string[];
+
+  beforeEach(() => {
+    savedArgv = process.argv;
+    vi.spyOn(log, 'warn');
+    vi.spyOn(process, 'exit').mockImplementation((code?: number | string | null | undefined) => {
+      throw new Error(`process.exit(${code})`);
+    });
   });
 
-  it('does not warn about known flags', () => {
-    const output = run('--help');
-    expect(output).not.toContain('Unknown flag');
+  afterEach(() => {
+    process.argv = savedArgv;
+    vi.restoreAllMocks();
   });
 
-  it('does not warn about --rebuild', () => {
-    // --rebuild is known, so no warning (will fail on Docker check but that's fine)
-    const output = run('build', '--tool', 'claude', '--rebuild');
-    expect(output).not.toContain('Unknown flag');
+  it('warns about unknown flags', async () => {
+    process.argv = ['node', 'nebubox', 'start', '.', '--tool', 'claude', '--badFlag'];
+    await main();
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('Unknown flag'));
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('--badFlag'));
   });
 
-  it('does not warn about --github', () => {
-    const output = run('--help', '--github');
-    expect(output).not.toContain('Unknown flag');
+  it('does not warn about known flags', async () => {
+    process.argv = ['node', 'nebubox', '--help'];
+    await main();
+    expect(log.warn).not.toHaveBeenCalledWith(expect.stringContaining('Unknown flag'));
   });
 
-  it('warns about --no-cache (replaced by --rebuild)', () => {
-    const output = run('build', '--tool', 'claude', '--no-cache');
-    expect(output).toContain('Unknown flag');
-    expect(output).toContain('--no-cache');
+  it('does not warn about --rebuild', async () => {
+    process.argv = ['node', 'nebubox', 'build', '--tool', 'claude', '--rebuild'];
+    await main();
+    expect(log.warn).not.toHaveBeenCalledWith(expect.stringContaining('Unknown flag'));
   });
 
-  it('warns about --recreate (replaced by --rebuild)', () => {
-    const output = run('start', '.', '--tool', 'claude', '--recreate');
-    expect(output).toContain('Unknown flag');
-    expect(output).toContain('--recreate');
+  it('does not warn about --github', async () => {
+    process.argv = ['node', 'nebubox', '--help', '--github'];
+    await main();
+    expect(log.warn).not.toHaveBeenCalledWith(expect.stringContaining('Unknown flag'));
+  });
+
+  it('warns about --no-cache (replaced by --rebuild)', async () => {
+    process.argv = ['node', 'nebubox', 'build', '--tool', 'claude', '--no-cache'];
+    await main();
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('Unknown flag'));
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('--no-cache'));
+  });
+
+  it('warns about --recreate (replaced by --rebuild)', async () => {
+    process.argv = ['node', 'nebubox', 'start', '.', '--tool', 'claude', '--recreate'];
+    await main();
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('Unknown flag'));
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('--recreate'));
   });
 });
