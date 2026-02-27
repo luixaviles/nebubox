@@ -25,20 +25,20 @@ describe('parseArgs', () => {
   });
 
   it('parses boolean flags (no value)', () => {
-    const result = parseArgs(['node', 'nebubox', 'build', '--no-cache']);
-    expect(result.flags['no-cache']).toBe('true');
+    const result = parseArgs(['node', 'nebubox', 'build', '--rebuild']);
+    expect(result.flags['rebuild']).toBe('true');
   });
 
   it('parses mixed positional args and flags', () => {
-    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--tool', 'gemini', '--no-cache']);
+    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--tool', 'gemini', '--rebuild']);
     expect(result.command).toBe('start');
     expect(result.args).toEqual(['./proj']);
-    expect(result.flags).toEqual({ tool: 'gemini', 'no-cache': 'true' });
+    expect(result.flags).toEqual({ tool: 'gemini', 'rebuild': 'true' });
   });
 
   it('treats flag followed by another flag as boolean', () => {
-    const result = parseArgs(['node', 'nebubox', 'build', '--no-cache', '--tool', 'codex']);
-    expect(result.flags['no-cache']).toBe('true');
+    const result = parseArgs(['node', 'nebubox', 'build', '--rebuild', '--tool', 'codex']);
+    expect(result.flags['rebuild']).toBe('true');
     expect(result.flags['tool']).toBe('codex');
   });
 
@@ -54,9 +54,9 @@ describe('parseArgs', () => {
   });
 
   it('parses --github alongside other flags', () => {
-    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--github', '--no-cache', '--tool', 'claude']);
+    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--github', '--rebuild', '--tool', 'claude']);
     expect(result.flags['github']).toBe('true');
-    expect(result.flags['no-cache']).toBe('true');
+    expect(result.flags['rebuild']).toBe('true');
     expect(result.flags['tool']).toBe('claude');
   });
 });

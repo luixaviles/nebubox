@@ -7,6 +7,7 @@ import {
   LABEL_TOOL,
   LABEL_PROJECT,
   LABEL_PROJECT_PATH,
+  LABEL_GITHUB,
   CODER_HOME,
   WORKSPACE_DIR,
 } from '../config/constants.js';
@@ -25,6 +26,7 @@ export interface ContainerInfo {
   tool: string;
   project: string;
   projectPath: string;
+  github: string;
 }
 
 export function getContainerName(toolName: string, projectPath: string): string {
@@ -36,7 +38,7 @@ export function containerExists(name: string): ContainerInfo | null {
   const result = dockerExec([
     'ps', '-a',
     '--filter', `name=^/${name}$`,
-    '--format', '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}',
+    '--format', '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}',
   ]);
 
   if (result.status !== 0 || !result.stdout) {
@@ -44,7 +46,7 @@ export function containerExists(name: string): ContainerInfo | null {
   }
 
   const parts = result.stdout.split('\t');
-  if (parts.length < 5) return null;
+  if (parts.length < 6) return null;
 
   return {
     name: parts[0],
@@ -52,6 +54,7 @@ export function containerExists(name: string): ContainerInfo | null {
     tool: parts[2],
     project: parts[3],
     projectPath: parts[4],
+    github: parts[5],
   };
 }
 
@@ -84,6 +87,7 @@ export function createContainer(
     '--label', `${LABEL_TOOL}=${profile.name}`,
     '--label', `${LABEL_PROJECT}=${projectBasename}`,
     '--label', `${LABEL_PROJECT_PATH}=${projectPath}`,
+    '--label', `${LABEL_GITHUB}=${github}`,
     '-it',
     '-v', `${projectPath}:${WORKSPACE_DIR}`,
     '-v', `${hostAuthDir}:${containerAuthDir}`,
@@ -157,7 +161,7 @@ export function listContainers(toolFilter?: string): ContainerInfo[] {
 
   args.push(
     '--format',
-    '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}',
+    '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}',
   );
 
   const result = dockerExec(args);
@@ -174,6 +178,12 @@ export function listContainers(toolFilter?: string): ContainerInfo[] {
       tool: parts[2],
       project: parts[3],
       projectPath: parts[4],
+      github: parts[5],
     };
   });
+}
+
+export function getContainerImage(name: string): string {
+  const result = dockerExec(['inspect', '--format', '{{.Config.Image}}', name]);
+  return result.status === 0 ? result.stdout : '';
 }

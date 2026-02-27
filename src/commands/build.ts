@@ -5,7 +5,7 @@ import * as log from '../utils/logger.js';
 
 export interface BuildOptions {
   tool: string;
-  noCache: boolean;
+  rebuild: boolean;
   github: boolean;
 }
 
@@ -21,5 +21,5 @@ export async function buildCommand(opts: BuildOptions): Promise<void> {
     log.info(`Image ${getImageName(profile.name, opts.github)} already exists. Rebuilding...`);
   }
 
-  await buildImage(profile, opts.noCache, imageOpts);
+  await buildImage(profile, opts.rebuild, imageOpts);
 }

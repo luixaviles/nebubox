@@ -88,12 +88,12 @@ When you exit the shell, the container keeps running. Reconnect anytime with `ne
 
 | Command | Description |
 |---------|-------------|
-| `nebubox start <path> [--tool <name>] [--no-cache] [--recreate] [--github]` | Create/start container and attach shell |
+| `nebubox start <path> [--tool <name>] [--rebuild] [--github]` | Create/start container and attach shell |
 | `nebubox list [--tool <name>]` | List managed containers |
 | `nebubox stop <name>` | Stop a running container |
 | `nebubox attach <name>` | Attach to a running container |
 | `nebubox remove <name>` | Remove a container |
-| `nebubox build [<tool>] [--tool <name>] [--no-cache] [--github]` | Build or rebuild a tool's Docker image |
+| `nebubox build [<tool>] [--tool <name>] [--rebuild] [--github]` | Build or rebuild a tool's Docker image |
 
 ## Supported Tools
 
@@ -140,11 +140,13 @@ Nebubox stores each tool's credentials under `~/.nebubox/auth/<tool>/` on the ho
 - **Codex CLI** — Auth is stored in the standard `.codex` directory. Run `codex` and follow the login prompt on first use.
 - **GitHub CLI** (`--github`) — When you pass `--github`, Nebubox installs `gh` in the container image and mounts `~/.nebubox/auth/github/` for credential persistence. Run `gh auth login` on first use. Your git identity (`user.name` and `user.email`) is automatically configured from your GitHub account on the next shell session.
 
-If you need to pick up configuration changes (e.g., after updating nebubox), recreate your containers:
+If you need to pick up configuration changes (e.g., after updating nebubox), rebuild your containers:
 
 ```bash
-nebubox start ./my-project --tool claude --recreate
+nebubox start ./my-project --tool claude --rebuild
 ```
+
+Nebubox also auto-detects when `--github` has changed since the container was created and transparently recreates the container to match.
 
 ## Examples
 
@@ -152,11 +154,11 @@ nebubox start ./my-project --tool claude --recreate
 # Build the Gemini image ahead of time
 nebubox build gemini
 
-# Rebuild without Docker cache
-nebubox build claude --no-cache
+# Rebuild image and recreate container
+nebubox build claude --rebuild
 
-# Recreate container to pick up image or config changes
-nebubox start ./my-project --tool claude --recreate
+# Rebuild to pick up image or config changes
+nebubox start ./my-project --tool claude --rebuild
 
 # Enable GitHub CLI for creating PRs, pushing, etc.
 nebubox start ./my-project --tool claude --github
