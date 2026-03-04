@@ -111,7 +111,7 @@ Each tool has a **profile** that defines its install method, auth directory, and
 - **Project** — `<your-project>` → `/home/coder/workspace`
 - **Auth** — `~/.nebubox/auth/<tool>/` → tool's config directory in the container
 
-Containers are named `nebubox-<tool>-<project-dir>` and labeled for easy filtering.
+Containers are named `nebubox-<tool>-<project-dir>` (or `nebubox-<tool>-<project-dir>-github` when `--github` is used) and labeled for easy filtering.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/luixaviles/nebubox/main/docs/assets/nebubox-architecture.svg" alt="Nebubox Architecture" width="720" />
@@ -145,8 +145,6 @@ If you need to pick up configuration changes (e.g., after updating nebubox), reb
 ```bash
 nebubox start ./my-project --tool claude --rebuild
 ```
-
-Nebubox also auto-detects when `--github` has changed since the container was created and transparently recreates the container to match.
 
 ## Examples
 
@@ -208,7 +206,7 @@ gh auth login
 # 3. Exit and re-attach (or open a new shell) —
 #    git identity is automatically configured
 exit
-nebubox attach nebubox-claude-github-my-project
+nebubox attach nebubox-claude-my-project-github
 ```
 
 After the initial `gh auth login`, credentials persist on the host at `~/.nebubox/auth/github/`. All future containers started with `--github` reuse them automatically — no repeated login needed.

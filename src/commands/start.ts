@@ -29,7 +29,7 @@ export async function startCommand(opts: StartOptions): Promise<void> {
   ensureDocker();
 
   const profile = getToolProfile(opts.tool)!;
-  const containerName = getContainerName(profile.name, projectPath);
+  const containerName = getContainerName(profile.name, projectPath, opts.github);
 
   const imageOpts = opts.github ? { github: true } : undefined;
 
@@ -53,20 +53,6 @@ export async function startCommand(opts: StartOptions): Promise<void> {
 
   // Check if container already exists
   let existing = containerExists(containerName);
-
-  // Auto-detect config drift: if --github changed since the container was
-  // created, transparently recreate to match the new options.
-  if (existing) {
-    const containerGithub = existing.github === 'true';
-    if (containerGithub !== opts.github) {
-      log.info('Recreating container to match new options...');
-      if (isContainerRunning(containerName)) {
-        stopContainer(containerName);
-      }
-      removeContainer(containerName);
-      existing = null;
-    }
-  }
 
   if (existing) {
     if (isContainerRunning(containerName)) {

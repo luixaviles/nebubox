@@ -58,7 +58,7 @@ Each tool has a **profile** that defines its install method, auth directory, and
 - **Project** — `<your-project>` → `/home/coder/workspace`
 - **Auth** — `~/.nebubox/auth/<tool>/` → tool's config directory in the container
 
-Containers are named `nebubox-<tool>-<project-dir>` and labeled for easy filtering.
+Containers are named `nebubox-<tool>-<project-dir>` (or `nebubox-<tool>-<project-dir>-github` when `--github` is used) and labeled for easy filtering.
 
 ### Directory Layout on Host
 

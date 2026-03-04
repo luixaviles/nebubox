@@ -59,6 +59,18 @@ describe('getContainerName', () => {
   it('uses only the basename of the path', () => {
     expect(getContainerName('gemini', '/a/b/c/deep-project')).toBe(`${CONTAINER_PREFIX}gemini-deep-project`);
   });
+
+  it('appends -github suffix when github is true', () => {
+    expect(getContainerName('claude', '/home/user/my-project', true)).toBe(`${CONTAINER_PREFIX}claude-my-project-github`);
+  });
+
+  it('does not append suffix when github is false', () => {
+    expect(getContainerName('claude', '/home/user/my-project', false)).toBe(`${CONTAINER_PREFIX}claude-my-project`);
+  });
+
+  it('does not append suffix when github is undefined', () => {
+    expect(getContainerName('claude', '/home/user/my-project', undefined)).toBe(`${CONTAINER_PREFIX}claude-my-project`);
+  });
 });
 
 describe('containerExists', () => {
@@ -223,6 +235,17 @@ describe('createContainer with github', () => {
     const vArgs = args.filter((_: string, i: number) => args[i - 1] === '-v');
     const ghMount = vArgs.find((v: string) => v.includes(`${CODER_HOME}/.config/gh`));
     expect(ghMount).toBeDefined();
+  });
+
+  it('uses github-suffixed container name', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    const name = createContainer(mockProfile, '/home/user/proj', { github: true });
+    expect(name).toBe(`${CONTAINER_PREFIX}claude-proj-github`);
+
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    expect(args).toContain(`${CONTAINER_PREFIX}claude-proj-github`);
+    const nameIdx = args.indexOf('--name');
+    expect(args[nameIdx + 1]).toBe(`${CONTAINER_PREFIX}claude-proj-github`);
   });
 
   it('uses github image name', () => {
