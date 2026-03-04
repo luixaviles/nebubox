@@ -48,6 +48,7 @@ EXAMPLES
   nebubox list
   nebubox list --tool claude
   nebubox stop nebubox-claude-my-project
+  nebubox stop nebubox-claude-my-project-github
   nebubox attach nebubox-claude-my-project
   nebubox remove nebubox-claude-my-project
   nebubox build --tool codex

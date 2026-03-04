@@ -29,9 +29,10 @@ export interface ContainerInfo {
   github: string;
 }
 
-export function getContainerName(toolName: string, projectPath: string): string {
+export function getContainerName(toolName: string, projectPath: string, github?: boolean): string {
   const projectBasename = basename(projectPath);
-  return `${CONTAINER_PREFIX}${toolName}-${projectBasename}`;
+  const suffix = github ? '-github' : '';
+  return `${CONTAINER_PREFIX}${toolName}-${projectBasename}${suffix}`;
 }
 
 export function containerExists(name: string): ContainerInfo | null {
@@ -74,7 +75,7 @@ export function createContainer(
   options?: ContainerOptions,
 ): string {
   const github = options?.github ?? false;
-  const name = getContainerName(profile.name, projectPath);
+  const name = getContainerName(profile.name, projectPath, github);
   const imageName = getImageName(profile.name, github);
   const hostAuthDir = ensureAuthDir(profile.name);
   const containerAuthDir = `${CODER_HOME}/${profile.authDir}`;

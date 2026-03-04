@@ -28,15 +28,17 @@ export function listCommand(opts: ListOptions): void {
     padRight('NAME', 40) +
     padRight('STATUS', 25) +
     padRight('TOOL', 12) +
+    padRight('GITHUB', 10) +
     'PROJECT',
   );
-  console.log('-'.repeat(90));
+  console.log('-'.repeat(100));
 
   for (const c of containers) {
     console.log(
       padRight(c.name, 40) +
       padRight(c.status, 25) +
       padRight(c.tool, 12) +
+      padRight(c.github === 'true' ? 'yes' : 'no', 10) +
       c.project,
     );
   }
