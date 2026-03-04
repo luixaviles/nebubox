@@ -10,7 +10,7 @@ import * as log from './utils/logger.js';
 import { promptToolSelection } from './utils/prompt.js';
 import { parseArgs } from './utils/parse-args.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.1';
 
 const KNOWN_FLAGS = new Set([
   'tool', 'rebuild', 'github', 'help', 'h', 'version', 'v',
