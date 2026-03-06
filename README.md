@@ -31,6 +31,7 @@ Running AI coding tools with full permissions is powerful but risky: a single ba
 - **Auth persistence** — credentials survive across container restarts via shared host directories
 - **Zero runtime dependencies** — just Node.js and Docker
 - **Non-root containers** — runs as `coder` user (UID 1000) with passwordless sudo
+- **pnpm support** — optional `--pnpm` flag installs pnpm via corepack
 
 ## Prerequisites
 
@@ -74,6 +75,9 @@ nebubox start ./my-project --tool codex
 
 # Start with GitHub CLI support
 nebubox start ./my-project --tool claude --github
+
+# Start with pnpm available in the container
+nebubox start ./my-project --tool claude --pnpm
 ```
 
 This will:
@@ -88,12 +92,12 @@ When you exit the shell, the container keeps running. Reconnect anytime with `ne
 
 | Command | Description |
 |---------|-------------|
-| `nebubox start <path> [--tool <name>] [--rebuild] [--github]` | Create/start container and attach shell |
+| `nebubox start <path> [--tool <name>] [--rebuild] [--github] [--pnpm]` | Create/start container and attach shell |
 | `nebubox list [--tool <name>]` | List managed containers |
 | `nebubox stop <name>` | Stop a running container |
 | `nebubox attach <name>` | Attach to a running container |
 | `nebubox remove <name>` | Remove a container |
-| `nebubox build [<tool>] [--tool <name>] [--rebuild] [--github]` | Build or rebuild a tool's Docker image |
+| `nebubox build [<tool>] [--tool <name>] [--rebuild] [--github] [--pnpm]` | Build or rebuild a tool's Docker image |
 
 ## Supported Tools
 
@@ -111,7 +115,7 @@ Each tool has a **profile** that defines its install method, auth directory, and
 - **Project** — `<your-project>` → `/home/coder/workspace`
 - **Auth** — `~/.nebubox/auth/<tool>/` → tool's config directory in the container
 
-Containers are named `nebubox-<tool>-<project-dir>` (or `nebubox-<tool>-<project-dir>-github` when `--github` is used) and labeled for easy filtering.
+Containers are named `nebubox-<tool>-<project-dir>` with optional suffixes (`-pnpm`, `-github`) when those flags are used, and labeled for easy filtering.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/luixaviles/nebubox/main/docs/assets/nebubox-architecture.svg" alt="Nebubox Architecture" width="720" />
@@ -160,6 +164,9 @@ nebubox start ./my-project --tool claude --rebuild
 
 # Enable GitHub CLI for creating PRs, pushing, etc.
 nebubox start ./my-project --tool claude --github
+
+# Enable pnpm for projects that use it
+nebubox start ./my-project --tool claude --pnpm
 
 # Work on two projects with Claude Code
 nebubox start ~/projects/frontend --tool claude
@@ -228,6 +235,37 @@ git config --global user.email "you@example.com"
 ```
 
 These overrides persist across container restarts because `.gitconfig` lives in the mounted volume.
+
+### pnpm Support (`--pnpm`)
+
+The `--pnpm` flag installs [pnpm](https://pnpm.io/) in the container via Node.js [corepack](https://nodejs.org/api/corepack.html), so projects that use pnpm can run `pnpm install`, `pnpm run`, etc. without manual setup.
+
+**What it does:**
+
+- Builds a **separate image** tagged `nebubox-<tool>-pnpm:latest` (your regular image is untouched)
+- Runs `corepack enable pnpm` during the image build
+- npm remains available alongside pnpm — both coexist without conflict
+
+**Usage:**
+
+```bash
+nebubox start ./my-project --tool claude --pnpm
+```
+
+**Combined with `--github`:**
+
+```bash
+nebubox start ./my-project --tool claude --pnpm --github
+# Image: nebubox-claude-pnpm-github:latest
+```
+
+**Version pinning:** If your project has a `packageManager` field in `package.json` (e.g., `"packageManager": "pnpm@9.15.0"`), corepack will automatically use that version. Without it, the version bundled with the Node.js base image is used.
+
+**Pre-building the image:**
+
+```bash
+nebubox build claude --pnpm
+```
 
 ## Development
 

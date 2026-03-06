@@ -19,16 +19,21 @@ import { GH_SETUP_SCRIPT, GH_BASHRC_HOOK } from '../github/setup-script.js';
 
 export interface ImageOptions {
   github?: boolean;
+  pnpm?: boolean;
 }
 
-export function getImageName(toolName: string, github?: boolean): string {
-  const suffix = github ? '-github' : '';
+// Suffixes appended in fixed order: -pnpm before -github
+export function getImageName(toolName: string, options?: ImageOptions): string {
+  let suffix = '';
+  if (options?.pnpm) suffix += '-pnpm';
+  if (options?.github) suffix += '-github';
   return `${IMAGE_PREFIX}${toolName}${suffix}:latest`;
 }
 
 export function generateDockerfile(profile: ToolProfile, options?: ImageOptions): string {
   const lines: string[] = [];
   const github = options?.github ?? false;
+  const pnpm = options?.pnpm ?? false;
 
   lines.push(`FROM ${BASE_IMAGE}`);
   lines.push('');
@@ -54,6 +59,12 @@ export function generateDockerfile(profile: ToolProfile, options?: ImageOptions)
     lines.push('COPY nebubox-gh-setup /usr/local/bin/nebubox-gh-setup');
     lines.push('RUN chmod +x /usr/local/bin/nebubox-gh-setup');
     lines.push('COPY nebubox-bashrc-hook /tmp/nebubox-bashrc-hook');
+    lines.push('');
+  }
+
+  // pnpm: enable shim as root (writes symlinks to /usr/local/bin/)
+  if (pnpm) {
+    lines.push('RUN corepack enable pnpm');
     lines.push('');
   }
 
@@ -84,6 +95,12 @@ export function generateDockerfile(profile: ToolProfile, options?: ImageOptions)
   lines.push(`ARG NPM_CONFIG_PREFIX="${CODER_HOME}/.npm-global"`);
   lines.push(`ENV PATH="${CODER_HOME}/.npm-global/bin:$PATH"`);
   lines.push('');
+
+  // pnpm: download and cache as coder user (cache lands in ~/.cache/node/corepack/)
+  if (pnpm) {
+    lines.push('RUN corepack prepare pnpm@latest --activate');
+    lines.push('');
+  }
 
   // Tool-specific install
   for (const cmd of profile.installCommands) {
@@ -116,15 +133,14 @@ export function generateDockerfile(profile: ToolProfile, options?: ImageOptions)
   return lines.join('\n');
 }
 
-export function imageExists(toolName: string, github?: boolean): boolean {
-  const imageName = getImageName(toolName, github);
+export function imageExists(toolName: string, options?: ImageOptions): boolean {
+  const imageName = getImageName(toolName, options);
   const result = dockerExec(['image', 'inspect', imageName]);
   return result.status === 0;
 }
 
 export async function buildImage(profile: ToolProfile, noCache = false, options?: ImageOptions): Promise<void> {
-  const github = options?.github ?? false;
-  const imageName = getImageName(profile.name, github);
+  const imageName = getImageName(profile.name, options);
   const dockerfile = generateDockerfile(profile, options);
 
   const tmpDir = mkdtempSync(join(tmpdir(), 'nebubox-'));
@@ -134,7 +150,7 @@ export async function buildImage(profile: ToolProfile, noCache = false, options?
     writeFileSync(dockerfilePath, dockerfile);
 
     // Write gh files into the build context so COPY can find them
-    if (github) {
+    if (options?.github) {
       writeFileSync(join(tmpDir, 'nebubox-gh-setup'), GH_SETUP_SCRIPT);
       writeFileSync(join(tmpDir, 'nebubox-bashrc-hook'), GH_BASHRC_HOOK);
     }

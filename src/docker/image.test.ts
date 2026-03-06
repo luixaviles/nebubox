@@ -29,11 +29,23 @@ describe('getImageName', () => {
   });
 
   it('appends -github suffix when github is true', () => {
-    expect(getImageName('claude', true)).toBe(`${IMAGE_PREFIX}claude-github:latest`);
+    expect(getImageName('claude', { github: true })).toBe(`${IMAGE_PREFIX}claude-github:latest`);
   });
 
   it('does not append suffix when github is false', () => {
-    expect(getImageName('claude', false)).toBe(`${IMAGE_PREFIX}claude:latest`);
+    expect(getImageName('claude', { github: false })).toBe(`${IMAGE_PREFIX}claude:latest`);
+  });
+
+  it('appends -pnpm suffix when pnpm is true', () => {
+    expect(getImageName('claude', { pnpm: true })).toBe(`${IMAGE_PREFIX}claude-pnpm:latest`);
+  });
+
+  it('appends -pnpm-github suffix when both are true', () => {
+    expect(getImageName('claude', { pnpm: true, github: true })).toBe(`${IMAGE_PREFIX}claude-pnpm-github:latest`);
+  });
+
+  it('returns no suffix when options is empty object', () => {
+    expect(getImageName('claude', {})).toBe(`${IMAGE_PREFIX}claude:latest`);
   });
 });
 
@@ -140,6 +152,58 @@ describe('generateDockerfile with github', () => {
     expect(df).not.toContain('githubcli-archive-keyring.gpg');
     expect(df).not.toContain('COPY nebubox-gh-setup');
     expect(df).not.toContain('GIT_CONFIG_GLOBAL');
+  });
+});
+
+describe('generateDockerfile with pnpm', () => {
+  it('includes corepack enable and prepare when pnpm is true', () => {
+    const df = generateDockerfile(mockProfile, { pnpm: true });
+    expect(df).toContain('RUN corepack enable pnpm');
+    expect(df).toContain('RUN corepack prepare pnpm@latest --activate');
+  });
+
+  it('does not include corepack when pnpm is not set', () => {
+    const df = generateDockerfile(mockProfile);
+    expect(df).not.toContain('corepack enable pnpm');
+    expect(df).not.toContain('corepack prepare');
+  });
+
+  it('corepack enable runs as root before USER coder', () => {
+    const df = generateDockerfile(mockProfile, { pnpm: true });
+    const enableIndex = df.indexOf('corepack enable pnpm');
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    expect(enableIndex).toBeGreaterThan(-1);
+    expect(enableIndex).toBeLessThan(userIndex);
+  });
+
+  it('corepack prepare runs as coder after USER coder', () => {
+    const df = generateDockerfile(mockProfile, { pnpm: true });
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    const prepareIndex = df.indexOf('corepack prepare pnpm@latest --activate');
+    expect(prepareIndex).toBeGreaterThan(-1);
+    expect(prepareIndex).toBeGreaterThan(userIndex);
+  });
+
+  it('corepack enable appears after apt-get install', () => {
+    const df = generateDockerfile(mockProfile, { pnpm: true });
+    const aptIndex = df.indexOf('apt-get install');
+    const enableIndex = df.indexOf('corepack enable pnpm');
+    expect(enableIndex).toBeGreaterThan(aptIndex);
+  });
+
+  it('includes both pnpm and github blocks when both are true', () => {
+    const df = generateDockerfile(mockProfile, { pnpm: true, github: true });
+    expect(df).toContain('RUN corepack enable pnpm');
+    expect(df).toContain('RUN corepack prepare pnpm@latest --activate');
+    expect(df).toContain('apt-get install -y --no-install-recommends gh');
+    // enable runs as root (before USER coder), prepare runs as coder (after)
+    const enableIndex = df.indexOf('corepack enable pnpm');
+    const ghIndex = df.indexOf('apt-get install -y --no-install-recommends gh');
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    const prepareIndex = df.indexOf('corepack prepare pnpm@latest --activate');
+    expect(enableIndex).toBeLessThan(userIndex);
+    expect(ghIndex).toBeLessThan(userIndex);
+    expect(prepareIndex).toBeGreaterThan(userIndex);
   });
 });
 

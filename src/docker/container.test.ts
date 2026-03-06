@@ -11,7 +11,7 @@ import {
   listContainers,
   getContainerImage,
 } from './container.js';
-import { CONTAINER_PREFIX, CODER_HOME, LABEL_MANAGED, LABEL_TOOL, LABEL_GITHUB } from '../config/constants.js';
+import { CONTAINER_PREFIX, CODER_HOME, LABEL_MANAGED, LABEL_TOOL, LABEL_GITHUB, LABEL_PNPM } from '../config/constants.js';
 import { ContainerError } from '../utils/errors.js';
 import type { ToolProfile } from '../config/tools.js';
 import { TOOL_PROFILES } from '../config/tools.js';
@@ -22,8 +22,10 @@ vi.mock('./client.js', () => ({
 }));
 
 vi.mock('./image.js', () => ({
-  getImageName: vi.fn((tool: string, github?: boolean) => {
-    const suffix = github ? '-github' : '';
+  getImageName: vi.fn((tool: string, options?: { github?: boolean; pnpm?: boolean }) => {
+    let suffix = '';
+    if (options?.pnpm) suffix += '-pnpm';
+    if (options?.github) suffix += '-github';
     return `nebubox-${tool}${suffix}:latest`;
   }),
 }));
@@ -61,15 +63,23 @@ describe('getContainerName', () => {
   });
 
   it('appends -github suffix when github is true', () => {
-    expect(getContainerName('claude', '/home/user/my-project', true)).toBe(`${CONTAINER_PREFIX}claude-my-project-github`);
+    expect(getContainerName('claude', '/home/user/my-project', { github: true })).toBe(`${CONTAINER_PREFIX}claude-my-project-github`);
   });
 
   it('does not append suffix when github is false', () => {
-    expect(getContainerName('claude', '/home/user/my-project', false)).toBe(`${CONTAINER_PREFIX}claude-my-project`);
+    expect(getContainerName('claude', '/home/user/my-project', { github: false })).toBe(`${CONTAINER_PREFIX}claude-my-project`);
   });
 
   it('does not append suffix when github is undefined', () => {
-    expect(getContainerName('claude', '/home/user/my-project', undefined)).toBe(`${CONTAINER_PREFIX}claude-my-project`);
+    expect(getContainerName('claude', '/home/user/my-project')).toBe(`${CONTAINER_PREFIX}claude-my-project`);
+  });
+
+  it('appends -pnpm suffix when pnpm is true', () => {
+    expect(getContainerName('claude', '/home/user/my-project', { pnpm: true })).toBe(`${CONTAINER_PREFIX}claude-my-project-pnpm`);
+  });
+
+  it('appends -pnpm-github suffix when both are true', () => {
+    expect(getContainerName('claude', '/home/user/my-project', { pnpm: true, github: true })).toBe(`${CONTAINER_PREFIX}claude-my-project-pnpm-github`);
   });
 });
 
@@ -77,7 +87,7 @@ describe('containerExists', () => {
   it('returns ContainerInfo when container is found', () => {
     vi.mocked(dockerExec).mockReturnValue({
       status: 0,
-      stdout: 'nebubox-claude-proj\tUp 2 hours\tclaude\tproj\t/home/user/proj\tfalse',
+      stdout: 'nebubox-claude-proj\tUp 2 hours\tclaude\tproj\t/home/user/proj\tfalse\tfalse',
       stderr: '',
     });
 
@@ -89,6 +99,7 @@ describe('containerExists', () => {
       project: 'proj',
       projectPath: '/home/user/proj',
       github: 'false',
+      pnpm: 'false',
     });
   });
 
@@ -113,6 +124,25 @@ describe('containerExists', () => {
     const args = vi.mocked(dockerExec).mock.calls[0][0];
     const format = args.find((a: string) => a.includes('nebubox.github'));
     expect(format).toBeDefined();
+  });
+
+  it('queries the nebubox.pnpm label', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: '', stderr: '' });
+    containerExists('test');
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const format = args.find((a: string) => a.includes('nebubox.pnpm'));
+    expect(format).toBeDefined();
+  });
+
+  it('returns pnpm false for old containers without pnpm label', () => {
+    vi.mocked(dockerExec).mockReturnValue({
+      status: 0,
+      stdout: 'nebubox-claude-proj\tUp 2 hours\tclaude\tproj\t/home/user/proj\tfalse\t',
+      stderr: '',
+    });
+    const info = containerExists('nebubox-claude-proj');
+    expect(info).not.toBeNull();
+    expect(info!.pnpm).toBe('false');
   });
 });
 
@@ -174,6 +204,20 @@ describe('createContainer', () => {
 
     const args = vi.mocked(dockerExec).mock.calls[0][0];
     expect(args).toContain(`${LABEL_GITHUB}=true`);
+  });
+
+  it('sets nebubox.pnpm label to false when pnpm is not enabled', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj');
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    expect(args).toContain(`${LABEL_PNPM}=false`);
+  });
+
+  it('sets nebubox.pnpm label to true when pnpm is enabled', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { pnpm: true });
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    expect(args).toContain(`${LABEL_PNPM}=true`);
   });
 });
 
@@ -257,6 +301,18 @@ describe('createContainer with github', () => {
     const lastArg = args[args.length - 1];
     expect(lastArg).toContain('-github:latest');
   });
+
+  it('uses pnpm-suffixed container name', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    const name = createContainer(mockProfile, '/home/user/proj', { pnpm: true });
+    expect(name).toBe(`${CONTAINER_PREFIX}claude-proj-pnpm`);
+  });
+
+  it('uses pnpm-github-suffixed container name when both set', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    const name = createContainer(mockProfile, '/home/user/proj', { pnpm: true, github: true });
+    expect(name).toBe(`${CONTAINER_PREFIX}claude-proj-pnpm-github`);
+  });
 });
 
 describe('startContainer', () => {
@@ -311,7 +367,7 @@ describe('listContainers', () => {
   it('returns parsed container list', () => {
     vi.mocked(dockerExec).mockReturnValue({
       status: 0,
-      stdout: 'c1\tUp\tclaude\tproj1\t/p1\tfalse\nc2\tExited\tgemini\tproj2\t/p2\ttrue',
+      stdout: 'c1\tUp\tclaude\tproj1\t/p1\tfalse\tfalse\nc2\tExited\tgemini\tproj2\t/p2\ttrue\tfalse',
       stderr: '',
     });
 
@@ -324,6 +380,7 @@ describe('listContainers', () => {
       project: 'proj1',
       projectPath: '/p1',
       github: 'false',
+      pnpm: 'false',
     });
     expect(list[1]).toEqual({
       name: 'c2',
@@ -332,6 +389,7 @@ describe('listContainers', () => {
       project: 'proj2',
       projectPath: '/p2',
       github: 'true',
+      pnpm: 'false',
     });
   });
 
@@ -368,6 +426,14 @@ describe('listContainers', () => {
 
     const args = vi.mocked(dockerExec).mock.calls[0][0];
     const format = args.find((a: string) => a.includes('nebubox.github'));
+    expect(format).toBeDefined();
+  });
+
+  it('queries the nebubox.pnpm label', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: '', stderr: '' });
+    listContainers();
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const format = args.find((a: string) => a.includes('nebubox.pnpm'));
     expect(format).toBeDefined();
   });
 });

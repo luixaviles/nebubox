@@ -8,6 +8,7 @@ import {
   LABEL_PROJECT,
   LABEL_PROJECT_PATH,
   LABEL_GITHUB,
+  LABEL_PNPM,
   CODER_HOME,
   WORKSPACE_DIR,
 } from '../config/constants.js';
@@ -18,6 +19,7 @@ import { ContainerError } from '../utils/errors.js';
 
 export interface ContainerOptions {
   github?: boolean;
+  pnpm?: boolean;
 }
 
 export interface ContainerInfo {
@@ -27,11 +29,15 @@ export interface ContainerInfo {
   project: string;
   projectPath: string;
   github: string;
+  pnpm: string;
 }
 
-export function getContainerName(toolName: string, projectPath: string, github?: boolean): string {
+// Suffixes appended in fixed order: -pnpm before -github
+export function getContainerName(toolName: string, projectPath: string, options?: ContainerOptions): string {
   const projectBasename = basename(projectPath);
-  const suffix = github ? '-github' : '';
+  let suffix = '';
+  if (options?.pnpm) suffix += '-pnpm';
+  if (options?.github) suffix += '-github';
   return `${CONTAINER_PREFIX}${toolName}-${projectBasename}${suffix}`;
 }
 
@@ -39,7 +45,7 @@ export function containerExists(name: string): ContainerInfo | null {
   const result = dockerExec([
     'ps', '-a',
     '--filter', `name=^/${name}$`,
-    '--format', '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}',
+    '--format', '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}\t{{.Label "nebubox.pnpm"}}',
   ]);
 
   if (result.status !== 0 || !result.stdout) {
@@ -47,7 +53,7 @@ export function containerExists(name: string): ContainerInfo | null {
   }
 
   const parts = result.stdout.split('\t');
-  if (parts.length < 6) return null;
+  if (parts.length < 7) return null;
 
   return {
     name: parts[0],
@@ -56,6 +62,7 @@ export function containerExists(name: string): ContainerInfo | null {
     project: parts[3],
     projectPath: parts[4],
     github: parts[5],
+    pnpm: parts[6] || 'false',
   };
 }
 
@@ -75,8 +82,9 @@ export function createContainer(
   options?: ContainerOptions,
 ): string {
   const github = options?.github ?? false;
-  const name = getContainerName(profile.name, projectPath, github);
-  const imageName = getImageName(profile.name, github);
+  const pnpm = options?.pnpm ?? false;
+  const name = getContainerName(profile.name, projectPath, { github, pnpm });
+  const imageName = getImageName(profile.name, { github, pnpm });
   const hostAuthDir = ensureAuthDir(profile.name);
   const containerAuthDir = `${CODER_HOME}/${profile.authDir}`;
   const projectBasename = basename(projectPath);
@@ -89,6 +97,7 @@ export function createContainer(
     '--label', `${LABEL_PROJECT}=${projectBasename}`,
     '--label', `${LABEL_PROJECT_PATH}=${projectPath}`,
     '--label', `${LABEL_GITHUB}=${github}`,
+    '--label', `${LABEL_PNPM}=${pnpm}`,
     '-it',
     '-v', `${projectPath}:${WORKSPACE_DIR}`,
     '-v', `${hostAuthDir}:${containerAuthDir}`,
@@ -162,7 +171,7 @@ export function listContainers(toolFilter?: string): ContainerInfo[] {
 
   args.push(
     '--format',
-    '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}',
+    '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}\t{{.Label "nebubox.pnpm"}}',
   );
 
   const result = dockerExec(args);
@@ -180,6 +189,7 @@ export function listContainers(toolFilter?: string): ContainerInfo[] {
       project: parts[3],
       projectPath: parts[4],
       github: parts[5],
+      pnpm: parts[6] || 'false',
     };
   });
 }

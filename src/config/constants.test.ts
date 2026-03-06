@@ -4,6 +4,8 @@ import {
   LABEL_TOOL,
   LABEL_PROJECT,
   LABEL_PROJECT_PATH,
+  LABEL_GITHUB,
+  LABEL_PNPM,
   IMAGE_PREFIX,
   CONTAINER_PREFIX,
   BASE_IMAGE,
@@ -21,6 +23,8 @@ describe('constants', () => {
     expect(LABEL_TOOL).toBe('nebubox.tool');
     expect(LABEL_PROJECT).toBe('nebubox.project');
     expect(LABEL_PROJECT_PATH).toBe('nebubox.project-path');
+    expect(LABEL_GITHUB).toBe('nebubox.github');
+    expect(LABEL_PNPM).toBe('nebubox.pnpm');
   });
 
   it('has correct prefixes', () => {

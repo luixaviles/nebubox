@@ -52,6 +52,12 @@ describe('unknown flag warnings', () => {
     expect(log.warn).not.toHaveBeenCalledWith(expect.stringContaining('Unknown flag'));
   });
 
+  it('does not warn about --pnpm', async () => {
+    process.argv = ['node', 'nebubox', '--help', '--pnpm'];
+    await main();
+    expect(log.warn).not.toHaveBeenCalledWith(expect.stringContaining('Unknown flag'));
+  });
+
   it('warns about --no-cache (replaced by --rebuild)', async () => {
     process.argv = ['node', 'nebubox', 'build', '--tool', 'claude', '--no-cache'];
     await main();
