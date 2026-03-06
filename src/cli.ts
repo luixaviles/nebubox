@@ -10,10 +10,10 @@ import * as log from './utils/logger.js';
 import { promptToolSelection } from './utils/prompt.js';
 import { parseArgs } from './utils/parse-args.js';
 
-const VERSION = '0.2.1';
+const VERSION = '0.3.0';
 
 const KNOWN_FLAGS = new Set([
-  'tool', 'rebuild', 'github', 'help', 'h', 'version', 'v',
+  'tool', 'rebuild', 'github', 'pnpm', 'help', 'h', 'version', 'v',
 ]);
 
 function printHelp(): void {
@@ -26,18 +26,19 @@ USAGE
   nebubox <command> [options]
 
 COMMANDS
-  start <path> [--tool <name>] [--rebuild] [--github]   Create/start container and attach shell
+  start <path> [--tool <name>] [--rebuild] [--github] [--pnpm]   Create/start container and attach shell
   list [--tool <name>]           List managed containers
   stop <name>                    Stop a running container
   attach <name>                  Attach to a running container
   remove <name>                  Remove a container
-  build [<tool>] [--tool <name>] [--rebuild] [--github]   Build (or rebuild) a tool's Docker image
+  build [<tool>] [--tool <name>] [--rebuild] [--github] [--pnpm]   Build (or rebuild) a tool's Docker image
 
 OPTIONS
   --tool <name>    Tool to use (interactive prompt if omitted)
                    Available: ${tools}
   --rebuild        Rebuild image (no Docker cache) and recreate container
   --github         Install GitHub CLI and persist auth across sessions
+  --pnpm           Install pnpm package manager via corepack
   --help, -h       Show this help message
   --version, -v    Show version
 
@@ -95,7 +96,7 @@ export async function main(): Promise<void> {
           process.exit(1);
         }
         const startTool = flags['tool'] ?? await promptToolSelection();
-        await startCommand({ path, tool: startTool, rebuild: flags['rebuild'] === 'true', github: flags['github'] === 'true' });
+        await startCommand({ path, tool: startTool, rebuild: flags['rebuild'] === 'true', github: flags['github'] === 'true', pnpm: flags['pnpm'] === 'true' });
         break;
       }
 
@@ -139,7 +140,7 @@ export async function main(): Promise<void> {
 
       case 'build': {
         const buildTool = args[0] ?? flags['tool'] ?? await promptToolSelection();
-        await buildCommand({ tool: buildTool, rebuild: flags['rebuild'] === 'true', github: flags['github'] === 'true' });
+        await buildCommand({ tool: buildTool, rebuild: flags['rebuild'] === 'true', github: flags['github'] === 'true', pnpm: flags['pnpm'] === 'true' });
         break;
       }
 

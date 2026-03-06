@@ -29,9 +29,10 @@ export function listCommand(opts: ListOptions): void {
     padRight('STATUS', 25) +
     padRight('TOOL', 12) +
     padRight('GITHUB', 10) +
+    padRight('PNPM', 8) +
     'PROJECT',
   );
-  console.log('-'.repeat(100));
+  console.log('-'.repeat(108));
 
   for (const c of containers) {
     console.log(
@@ -39,6 +40,7 @@ export function listCommand(opts: ListOptions): void {
       padRight(c.status, 25) +
       padRight(c.tool, 12) +
       padRight(c.github === 'true' ? 'yes' : 'no', 10) +
+      padRight(c.pnpm === 'true' ? 'yes' : 'no', 8) +
       c.project,
     );
   }

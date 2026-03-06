@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { getToolProfile } from '../config/tools.js';
-import { buildImage, imageExists } from '../docker/image.js';
+import { buildImage, imageExists, type ImageOptions } from '../docker/image.js';
 import {
   containerExists,
   isContainerRunning,
@@ -21,6 +21,7 @@ export interface StartOptions {
   tool: string;
   rebuild: boolean;
   github: boolean;
+  pnpm: boolean;
 }
 
 export async function startCommand(opts: StartOptions): Promise<void> {
@@ -29,12 +30,13 @@ export async function startCommand(opts: StartOptions): Promise<void> {
   ensureDocker();
 
   const profile = getToolProfile(opts.tool)!;
-  const containerName = getContainerName(profile.name, projectPath, opts.github);
-
-  const imageOpts = opts.github ? { github: true } : undefined;
+  const imageOpts: ImageOptions = {};
+  if (opts.github) imageOpts.github = true;
+  if (opts.pnpm) imageOpts.pnpm = true;
+  const containerName = getContainerName(profile.name, projectPath, { github: opts.github, pnpm: opts.pnpm });
 
   // Ensure image exists
-  if (!imageExists(profile.name, opts.github)) {
+  if (!imageExists(profile.name, imageOpts)) {
     log.info(`Image for ${profile.displayName} not found. Building...`);
     await buildImage(profile, opts.rebuild, imageOpts);
   } else if (opts.rebuild) {
@@ -64,7 +66,7 @@ export async function startCommand(opts: StartOptions): Promise<void> {
     }
   } else {
     log.step(`Creating container ${containerName}...`);
-    createContainer(profile, projectPath, opts.github ? { github: true } : undefined);
+    createContainer(profile, projectPath, imageOpts);
     startContainer(containerName);
     log.success(`Container ${containerName} created and started.`);
   }
