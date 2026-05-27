@@ -7,6 +7,7 @@ export interface ToolProfile {
   authDir: string;
   authFiles: string[];
   hint: string;
+  warning?: string;
 }
 
 const claude: ToolProfile = {
@@ -30,7 +31,7 @@ const claude: ToolProfile = {
 
 const gemini: ToolProfile = {
   name: 'gemini',
-  displayName: 'Gemini CLI',
+  displayName: 'Gemini CLI (Deprecated)',
   packages: [],
   installCommands: [
     'npm install -g @google/gemini-cli',
@@ -39,6 +40,7 @@ const gemini: ToolProfile = {
   authDir: '.gemini',
   authFiles: [],
   hint: 'Run `gemini --approval-mode=yolo --sandbox=false` to start Gemini CLI.',
+  warning: 'Gemini CLI is deprecated and will transition to Antigravity CLI. See https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/',
 };
 
 const codex: ToolProfile = {
@@ -54,10 +56,26 @@ const codex: ToolProfile = {
   hint: 'Run `codex --dangerously-bypass-approvals-and-sandbox` to start Codex CLI.',
 };
 
+const antigravity: ToolProfile = {
+  name: 'antigravity',
+  displayName: 'Antigravity CLI',
+  packages: [],
+  installCommands: [
+    'curl -fsSL https://antigravity.google/cli/install.sh | bash',
+  ],
+  envVars: {
+    PATH: '/home/coder/.local/bin:$PATH',
+  },
+  authDir: '.config/antigravity',
+  authFiles: [],
+  hint: 'Run `agy --dangerously-skip-permissions` to start Antigravity CLI.',
+};
+
 export const TOOL_PROFILES: Record<string, ToolProfile> = {
   claude,
-  gemini,
+  antigravity,
   codex,
+  gemini,
 };
 
 export function getToolProfile(name: string): ToolProfile | undefined {

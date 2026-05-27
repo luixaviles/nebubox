@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { TOOL_PROFILES, getToolProfile, getToolNames, type ToolProfile } from './tools.js';
 
 describe('TOOL_PROFILES', () => {
-  it('contains claude, gemini, and codex', () => {
-    expect(Object.keys(TOOL_PROFILES)).toEqual(['claude', 'gemini', 'codex']);
+  it('contains claude, antigravity, codex, and gemini', () => {
+    expect(Object.keys(TOOL_PROFILES)).toEqual(['claude', 'antigravity', 'codex', 'gemini']);
   });
 
   it.each(Object.entries(TOOL_PROFILES))('%s has required fields', (_name, profile: ToolProfile) => {
@@ -37,7 +37,7 @@ describe('getToolProfile', () => {
 describe('getToolNames', () => {
   it('returns array of tool names', () => {
     const names = getToolNames();
-    expect(names).toEqual(['claude', 'gemini', 'codex']);
+    expect(names).toEqual(['claude', 'antigravity', 'codex', 'gemini']);
   });
 
   it('returns a new array each time', () => {

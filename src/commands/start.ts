@@ -72,6 +72,9 @@ export async function startCommand(opts: StartOptions): Promise<void> {
   }
 
   log.hint(profile.hint);
+  if (profile.warning) {
+    log.warn(profile.warning);
+  }
 
   if (opts.github) {
     const hostsFile = join(getAuthDir('github'), 'hosts.yml');
