@@ -4,7 +4,7 @@
   "description": "Run AI coding CLI tools safely inside Docker containers",
   "type": "module",
   "bin": {
-    "nebubox": "./dist/index.js"
+    "nebubox": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
