@@ -35,3 +35,5 @@ npm-debug.log*
 
 # Logs
 *.log
+
+.antigravitycli/

@@ -6,7 +6,7 @@ description: Run AI coding CLI tools like Claude Code, Gemini CLI, and Codex saf
 
 ## Key Features
 
-- **Multi-tool support** — Claude Code, Gemini CLI, and Codex CLI out of the box
+- **Multi-tool support** — Claude Code, Antigravity CLI, Codex CLI, and Gemini CLI out of the box
 - **Filesystem isolation** — only the mounted project directory is accessible
 - **Auth persistence** — credentials survive across container restarts via shared host directories
 - **Zero runtime dependencies** — just Node.js and Docker
@@ -23,8 +23,9 @@ description: Run AI coding CLI tools like Claude Code, Gemini CLI, and Codex saf
 | Tool | Launch command inside container |
 |------|-------------------------------|
 | Claude Code | `claude --dangerously-skip-permissions` |
-| Gemini CLI | `gemini --approval-mode=yolo --sandbox=false` |
+| Antigravity CLI | `agy --dangerously-skip-permissions` |
 | Codex CLI | `codex --dangerously-bypass-approvals-and-sandbox` |
+| Gemini CLI (Deprecated) | `gemini --approval-mode=yolo --sandbox=false` |
 
 When `--tool` is omitted, Nebubox presents an interactive prompt to select a tool.
 
@@ -36,8 +37,9 @@ nebubox start ./my-project
 
 # Start with a specific tool
 nebubox start ./my-project --tool claude
-nebubox start ./my-project --tool gemini
+nebubox start ./my-project --tool antigravity
 nebubox start ./my-project --tool codex
+nebubox start ./my-project --tool gemini
 
 # Start with GitHub CLI support
 nebubox start ./my-project --tool claude --github
@@ -66,8 +68,9 @@ Containers are named `nebubox-<tool>-<project-dir>` (or `nebubox-<tool>-<project
 ~/.nebubox/
   auth/
     claude/         # Claude Code credentials & config
-    gemini/         # Gemini CLI credentials
+    antigravity/    # Antigravity CLI credentials
     codex/          # Codex CLI credentials
+    gemini/         # Gemini CLI credentials
     github/         # GitHub CLI auth + .gitconfig (when --github is used)
 ```
 

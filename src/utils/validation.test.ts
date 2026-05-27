@@ -35,6 +35,7 @@ describe('validateToolName', () => {
     expect(() => validateToolName('claude')).not.toThrow();
     expect(() => validateToolName('gemini')).not.toThrow();
     expect(() => validateToolName('codex')).not.toThrow();
+    expect(() => validateToolName('antigravity')).not.toThrow();
   });
 
   it('throws ValidationError for unknown tool', () => {
@@ -49,6 +50,7 @@ describe('validateToolName', () => {
       expect((e as Error).message).toContain('claude');
       expect((e as Error).message).toContain('gemini');
       expect((e as Error).message).toContain('codex');
+      expect((e as Error).message).toContain('antigravity');
     }
   });
 });
