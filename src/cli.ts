@@ -69,12 +69,12 @@ export async function main(): Promise<void> {
 
   const { command, args, flags } = parseArgs(process.argv);
 
-  if (flags['help'] || flags['h'] || command === 'help') {
+  if (flags['help'] || flags['h'] || command === 'help' || command === '-h') {
     printHelp();
     return;
   }
 
-  if (flags['version'] || flags['v'] || command === 'version') {
+  if (flags['version'] || flags['v'] || command === 'version' || command === '-v') {
     console.log(`nebubox v${VERSION}`);
     return;
   }
