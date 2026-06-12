@@ -8,6 +8,7 @@ export interface BuildOptions {
   rebuild: boolean;
   github: boolean;
   pnpm: boolean;
+  playwright: boolean;
 }
 
 export async function buildCommand(opts: BuildOptions): Promise<void> {
@@ -19,6 +20,7 @@ export async function buildCommand(opts: BuildOptions): Promise<void> {
   const imageOpts: ImageOptions = {};
   if (opts.github) imageOpts.github = true;
   if (opts.pnpm) imageOpts.pnpm = true;
+  if (opts.playwright) imageOpts.playwright = true;
 
   if (imageExists(profile.name, imageOpts)) {
     log.info(`Image ${getImageName(profile.name, imageOpts)} already exists. Rebuilding...`);

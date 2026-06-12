@@ -22,6 +22,7 @@ export interface StartOptions {
   rebuild: boolean;
   github: boolean;
   pnpm: boolean;
+  playwright: boolean;
 }
 
 export async function startCommand(opts: StartOptions): Promise<void> {
@@ -33,7 +34,12 @@ export async function startCommand(opts: StartOptions): Promise<void> {
   const imageOpts: ImageOptions = {};
   if (opts.github) imageOpts.github = true;
   if (opts.pnpm) imageOpts.pnpm = true;
-  const containerName = getContainerName(profile.name, projectPath, { github: opts.github, pnpm: opts.pnpm });
+  if (opts.playwright) imageOpts.playwright = true;
+  const containerName = getContainerName(profile.name, projectPath, {
+    github: opts.github,
+    pnpm: opts.pnpm,
+    playwright: opts.playwright,
+  });
 
   // Ensure image exists
   if (!imageExists(profile.name, imageOpts)) {

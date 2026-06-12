@@ -32,6 +32,7 @@ Running AI coding tools with full permissions is powerful but risky: a single ba
 - **Zero runtime dependencies** — just Node.js and Docker
 - **Non-root containers** — runs as `coder` user (UID 1000) with passwordless sudo
 - **pnpm support** — optional `--pnpm` flag installs pnpm via corepack
+- **Playwright support** — optional `--playwright` flag installs headless browser system dependencies, global CLIs, and configures a persistent host cache
 
 ## Prerequisites
 
@@ -79,6 +80,9 @@ nebubox start ./my-project --tool claude --github
 
 # Start with pnpm available in the container
 nebubox start ./my-project --tool claude --pnpm
+
+# Start with Playwright browser screenshot support
+nebubox start ./my-project --tool claude --playwright
 ```
 
 This will:
@@ -93,12 +97,12 @@ When you exit the shell, the container keeps running. Reconnect anytime with `ne
 
 | Command | Description |
 |---------|-------------|
-| `nebubox start <path> [--tool <name>] [--rebuild] [--github] [--pnpm]` | Create/start container and attach shell |
+| `nebubox start <path> [--tool <name>] [--rebuild] [--github] [--pnpm] [--playwright]` | Create/start container and attach shell |
 | `nebubox list [--tool <name>]` | List managed containers |
 | `nebubox stop <name>` | Stop a running container |
 | `nebubox attach <name>` | Attach to a running container |
 | `nebubox remove <name>` | Remove a container |
-| `nebubox build [<tool>] [--tool <name>] [--rebuild] [--github] [--pnpm]` | Build or rebuild a tool's Docker image |
+| `nebubox build [<tool>] [--tool <name>] [--rebuild] [--github] [--pnpm] [--playwright]` | Build or rebuild a tool's Docker image |
 
 ## Supported Tools
 
@@ -268,6 +272,52 @@ nebubox start ./my-project --tool claude --pnpm --github
 
 ```bash
 nebubox build claude --pnpm
+```
+
+### Playwright Support (`--playwright`)
+
+The `--playwright` flag equips the container with headless browser screenshot and testing capabilities out-of-the-box. It installs system packages for Chromium rendering (including international fonts and `unzip`) and installs Playwright executables globally.
+
+**What it does:**
+
+- Builds a **separate image** tagged `nebubox-<tool>-playwright:latest` (or dynamically combined suffixes, e.g. `nebubox-<tool>-pnpm-playwright-github:latest`)
+- Installs the required Debian graphical, windowing, and font libraries for headless Chromium inside the image at build-time.
+- Installs `unzip` (system package) and `@playwright/test` / `@playwright/cli` globally in the container's user path.
+- Bind-mounts the host directory `~/.nebubox/playwright-cache/` to `/home/coder/.cache/ms-playwright` inside the container. This ensures downloaded browsers survive container reconstructions and are shared across projects.
+
+**Usage:**
+
+```bash
+nebubox start ./my-project --tool claude --playwright
+```
+
+**First-use workflow:**
+
+The first time you start a container with `--playwright`, you must download the Chromium browser binary into the persistent host cache:
+
+```bash
+# 1. Download the Chromium browser (only needed once per host machine)
+playwright install chromium
+
+# 2. (Optional) Install agent skills for playwright-cli
+playwright-cli install --skills
+```
+
+Once installed, you can test it by running:
+```bash
+playwright screenshot https://example.com example.png
+```
+
+**Combined with other options:**
+
+```bash
+nebubox start ./my-project --tool claude --pnpm --playwright --github
+```
+
+**Pre-building the image:**
+
+```bash
+nebubox build claude --playwright
 ```
 
 ## Development
