@@ -134,7 +134,7 @@ describe('main CLI functionality', () => {
 
   it('starts command with path and flags', async () => {
     const { startCommand } = await import('./commands/start.js');
-    process.argv = ['node', 'nebubox', 'start', './my-path', '--tool', 'claude', '--rebuild', 'true', '--github', 'true', '--pnpm', 'true'];
+    process.argv = ['node', 'nebubox', 'start', './my-path', '--tool', 'claude', '--rebuild', 'true', '--github', 'true', '--pnpm', 'true', '--playwright', 'true'];
     await main();
     expect(startCommand).toHaveBeenCalledWith({
       path: './my-path',
@@ -142,6 +142,7 @@ describe('main CLI functionality', () => {
       rebuild: true,
       github: true,
       pnpm: true,
+      playwright: true,
     });
   });
 
@@ -158,6 +159,7 @@ describe('main CLI functionality', () => {
       rebuild: false,
       github: false,
       pnpm: false,
+      playwright: false,
     });
   });
 
@@ -209,13 +211,14 @@ describe('main CLI functionality', () => {
 
   it('builds command with tool and flags', async () => {
     const { buildCommand } = await import('./commands/build.js');
-    process.argv = ['node', 'nebubox', 'build', 'claude', '--rebuild', 'true', '--github', 'true', '--pnpm', 'true'];
+    process.argv = ['node', 'nebubox', 'build', 'claude', '--rebuild', 'true', '--github', 'true', '--pnpm', 'true', '--playwright', 'true'];
     await main();
     expect(buildCommand).toHaveBeenCalledWith({
       tool: 'claude',
       rebuild: true,
       github: true,
       pnpm: true,
+      playwright: true,
     });
   });
 
@@ -231,6 +234,7 @@ describe('main CLI functionality', () => {
       rebuild: false,
       github: false,
       pnpm: false,
+      playwright: false,
     });
   });
 

@@ -40,6 +40,14 @@ describe('getImageName', () => {
     expect(getImageName('claude', { pnpm: true })).toBe(`${IMAGE_PREFIX}claude-pnpm:latest`);
   });
 
+  it('appends -playwright suffix when playwright is true', () => {
+    expect(getImageName('claude', { playwright: true })).toBe(`${IMAGE_PREFIX}claude-playwright:latest`);
+  });
+
+  it('appends -pnpm-playwright-github suffix when all are true', () => {
+    expect(getImageName('claude', { pnpm: true, playwright: true, github: true })).toBe(`${IMAGE_PREFIX}claude-pnpm-playwright-github:latest`);
+  });
+
   it('appends -pnpm-github suffix when both are true', () => {
     expect(getImageName('claude', { pnpm: true, github: true })).toBe(`${IMAGE_PREFIX}claude-pnpm-github:latest`);
   });
@@ -204,6 +212,39 @@ describe('generateDockerfile with pnpm', () => {
     expect(enableIndex).toBeLessThan(userIndex);
     expect(ghIndex).toBeLessThan(userIndex);
     expect(prepareIndex).toBeGreaterThan(userIndex);
+  });
+});
+
+describe('generateDockerfile with playwright', () => {
+  it('includes playwright install-deps and unzip when playwright is true', () => {
+    const df = generateDockerfile(mockProfile, { playwright: true });
+    expect(df).toContain('npx playwright install-deps chromium');
+    expect(df).toContain('apt-get install -y --no-install-recommends unzip');
+    expect(df).toContain('npm install -g @playwright/test @playwright/cli');
+  });
+
+  it('does not include playwright install-deps when playwright is not set', () => {
+    const df = generateDockerfile(mockProfile);
+    expect(df).not.toContain('playwright install-deps');
+    expect(df).not.toContain('unzip');
+    expect(df).not.toContain('@playwright/test');
+    expect(df).not.toContain('@playwright/cli');
+  });
+
+  it('runs install-deps and unzip as root before USER coder', () => {
+    const df = generateDockerfile(mockProfile, { playwright: true });
+    const installIndex = df.indexOf('npx playwright install-deps chromium');
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    expect(installIndex).toBeGreaterThan(-1);
+    expect(installIndex).toBeLessThan(userIndex);
+  });
+
+  it('runs npm install -g @playwright/test @playwright/cli as coder user after USER coder', () => {
+    const df = generateDockerfile(mockProfile, { playwright: true });
+    const installIndex = df.indexOf('npm install -g @playwright/test @playwright/cli');
+    const userIndex = df.indexOf(`USER ${CODER_USER}`);
+    expect(installIndex).toBeGreaterThan(-1);
+    expect(installIndex).toBeGreaterThan(userIndex);
   });
 });
 

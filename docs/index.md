@@ -11,6 +11,7 @@ description: Run AI coding CLI tools like Claude Code, Gemini CLI, and Codex saf
 - **Auth persistence** — credentials survive across container restarts via shared host directories
 - **Zero runtime dependencies** — just Node.js and Docker
 - **Non-root containers** — runs as `coder` user (UID 1000) with passwordless sudo
+- **Playwright support** — optional `--playwright` flag installs headless browser system dependencies, global CLIs, and configures a persistent host cache
 
 ## Architecture
 
@@ -68,10 +69,11 @@ Containers are named `nebubox-<tool>-<project-dir>` (or `nebubox-<tool>-<project
 ~/.nebubox/
   auth/
     claude/         # Claude Code credentials & config
-    antigravity/    # Antigravity CLI credentials
+    antigravity/    # Antigravity CLI credentials (shared)
     codex/          # Codex CLI credentials
     gemini/         # Gemini CLI credentials
     github/         # GitHub CLI auth + .gitconfig (when --github is used)
+  playwright-cache/ # Playwright browser cache (when --playwright is used)
 ```
 
 ## GitHub CLI Integration
@@ -79,6 +81,21 @@ Containers are named `nebubox-<tool>-<project-dir>` (or `nebubox-<tool>-<project
 Pass `--github` to install [GitHub CLI](https://cli.github.com/) in the container with persistent credentials. After a one-time `gh auth login`, your git identity is automatically configured from your GitHub account, and AI tools can create PRs, push branches, and call the GitHub API from inside the sandbox.
 
 See the [Advanced section in the README](https://github.com/luixaviles/nebubox#advanced) for the full setup guide.
+
+## Playwright Integration
+
+Pass `--playwright` to equip the container with headless browser screenshot and testing capabilities out-of-the-box. Nebubox installs system packages for Chromium rendering (including international fonts and `unzip`) and installs Playwright executables globally.
+
+The first time you start a container with `--playwright`, you should download the Chromium browser binary into the persistent host cache:
+
+```bash
+playwright install chromium
+```
+
+Once installed, you can test it by running:
+```bash
+playwright screenshot https://example.com example.png
+```
 
 ## Links
 

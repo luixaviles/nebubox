@@ -20,12 +20,14 @@ import { GH_SETUP_SCRIPT, GH_BASHRC_HOOK } from '../github/setup-script.js';
 export interface ImageOptions {
   github?: boolean;
   pnpm?: boolean;
+  playwright?: boolean;
 }
 
-// Suffixes appended in fixed order: -pnpm before -github
+// Suffixes appended in fixed order: -pnpm before -playwright before -github
 export function getImageName(toolName: string, options?: ImageOptions): string {
   let suffix = '';
   if (options?.pnpm) suffix += '-pnpm';
+  if (options?.playwright) suffix += '-playwright';
   if (options?.github) suffix += '-github';
   return `${IMAGE_PREFIX}${toolName}${suffix}:latest`;
 }
@@ -34,6 +36,7 @@ export function generateDockerfile(profile: ToolProfile, options?: ImageOptions)
   const lines: string[] = [];
   const github = options?.github ?? false;
   const pnpm = options?.pnpm ?? false;
+  const playwright = options?.playwright ?? false;
 
   lines.push(`FROM ${BASE_IMAGE}`);
   lines.push('');
@@ -68,6 +71,14 @@ export function generateDockerfile(profile: ToolProfile, options?: ImageOptions)
     lines.push('');
   }
 
+  // Playwright: install unzip and Chromium system dependencies (must run as root, before USER coder)
+  if (playwright) {
+    lines.push('RUN apt-get update && apt-get install -y --no-install-recommends unzip \\');
+    lines.push('    && npx playwright install-deps chromium \\');
+    lines.push('    && rm -rf /var/lib/apt/lists/*');
+    lines.push('');
+  }
+
   // Non-root user (handles pre-existing GID/UID in base image)
   lines.push(`RUN groupadd --gid ${CODER_GID} ${CODER_USER} 2>/dev/null || true \\`);
   lines.push(`    && (useradd --uid ${CODER_UID} --gid ${CODER_GID} --shell /bin/bash --create-home ${CODER_USER} 2>/dev/null \\`);
@@ -95,6 +106,12 @@ export function generateDockerfile(profile: ToolProfile, options?: ImageOptions)
   lines.push(`ARG NPM_CONFIG_PREFIX="${CODER_HOME}/.npm-global"`);
   lines.push(`ENV PATH="${CODER_HOME}/.npm-global/bin:$PATH"`);
   lines.push('');
+
+  // Playwright: install global CLI for coder user
+  if (playwright) {
+    lines.push('RUN npm install -g @playwright/test @playwright/cli');
+    lines.push('');
+  }
 
   // pnpm: download and cache as coder user (cache lands in ~/.cache/node/corepack/)
   if (pnpm) {

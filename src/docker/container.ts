@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { ToolProfile } from '../config/tools.js';
 import {
@@ -9,10 +9,11 @@ import {
   LABEL_PROJECT_PATH,
   LABEL_GITHUB,
   LABEL_PNPM,
+  LABEL_PLAYWRIGHT,
   CODER_HOME,
   WORKSPACE_DIR,
 } from '../config/constants.js';
-import { ensureAuthDir, ensureAuthFile } from '../config/paths.js';
+import { ensureAuthDir, ensureAuthFile, getNebuboxHome } from '../config/paths.js';
 import { dockerExec, dockerInteractive } from './client.js';
 import { getImageName } from './image.js';
 import { ContainerError } from '../utils/errors.js';
@@ -20,6 +21,7 @@ import { ContainerError } from '../utils/errors.js';
 export interface ContainerOptions {
   github?: boolean;
   pnpm?: boolean;
+  playwright?: boolean;
 }
 
 export interface ContainerInfo {
@@ -30,13 +32,15 @@ export interface ContainerInfo {
   projectPath: string;
   github: string;
   pnpm: string;
+  playwright: string;
 }
 
-// Suffixes appended in fixed order: -pnpm before -github
+// Suffixes appended in fixed order: -pnpm before -playwright before -github
 export function getContainerName(toolName: string, projectPath: string, options?: ContainerOptions): string {
   const projectBasename = basename(projectPath);
   let suffix = '';
   if (options?.pnpm) suffix += '-pnpm';
+  if (options?.playwright) suffix += '-playwright';
   if (options?.github) suffix += '-github';
   return `${CONTAINER_PREFIX}${toolName}-${projectBasename}${suffix}`;
 }
@@ -45,7 +49,7 @@ export function containerExists(name: string): ContainerInfo | null {
   const result = dockerExec([
     'ps', '-a',
     '--filter', `name=^/${name}$`,
-    '--format', '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}\t{{.Label "nebubox.pnpm"}}',
+    '--format', '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}\t{{.Label "nebubox.pnpm"}}\t{{.Label "nebubox.playwright"}}',
   ]);
 
   if (result.status !== 0 || !result.stdout) {
@@ -63,6 +67,7 @@ export function containerExists(name: string): ContainerInfo | null {
     projectPath: parts[4],
     github: parts[5],
     pnpm: parts[6] || 'false',
+    playwright: parts[7] || 'false',
   };
 }
 
@@ -83,8 +88,9 @@ export function createContainer(
 ): string {
   const github = options?.github ?? false;
   const pnpm = options?.pnpm ?? false;
-  const name = getContainerName(profile.name, projectPath, { github, pnpm });
-  const imageName = getImageName(profile.name, { github, pnpm });
+  const playwright = options?.playwright ?? false;
+  const name = getContainerName(profile.name, projectPath, { github, pnpm, playwright });
+  const imageName = getImageName(profile.name, { github, pnpm, playwright });
   const hostAuthDir = ensureAuthDir(profile.name);
   const containerAuthDir = `${CODER_HOME}/${profile.authDir}`;
   const projectBasename = basename(projectPath);
@@ -98,6 +104,7 @@ export function createContainer(
     '--label', `${LABEL_PROJECT_PATH}=${projectPath}`,
     '--label', `${LABEL_GITHUB}=${github}`,
     '--label', `${LABEL_PNPM}=${pnpm}`,
+    '--label', `${LABEL_PLAYWRIGHT}=${playwright}`,
     '-it',
     '-v', `${projectPath}:${WORKSPACE_DIR}`,
     '-v', `${hostAuthDir}:${containerAuthDir}`,
@@ -121,6 +128,13 @@ export function createContainer(
     if (!existsSync(gitconfigPath)) {
       writeFileSync(gitconfigPath, '');
     }
+  }
+
+  // Playwright: mount host browser cache
+  if (playwright) {
+    const hostPlaywrightCache = join(getNebuboxHome(), 'playwright-cache');
+    mkdirSync(hostPlaywrightCache, { recursive: true });
+    createArgs.push('-v', `${hostPlaywrightCache}:${CODER_HOME}/.cache/ms-playwright`);
   }
 
   createArgs.push('-w', WORKSPACE_DIR, imageName);
@@ -171,7 +185,7 @@ export function listContainers(toolFilter?: string): ContainerInfo[] {
 
   args.push(
     '--format',
-    '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}\t{{.Label "nebubox.pnpm"}}',
+    '{{.Names}}\t{{.Status}}\t{{.Label "nebubox.tool"}}\t{{.Label "nebubox.project"}}\t{{.Label "nebubox.project-path"}}\t{{.Label "nebubox.github"}}\t{{.Label "nebubox.pnpm"}}\t{{.Label "nebubox.playwright"}}',
   );
 
   const result = dockerExec(args);
@@ -190,6 +204,7 @@ export function listContainers(toolFilter?: string): ContainerInfo[] {
       projectPath: parts[4],
       github: parts[5],
       pnpm: parts[6] || 'false',
+      playwright: parts[7] || 'false',
     };
   });
 }

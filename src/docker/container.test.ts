@@ -11,7 +11,7 @@ import {
   listContainers,
   getContainerImage,
 } from './container.js';
-import { CONTAINER_PREFIX, CODER_HOME, LABEL_MANAGED, LABEL_TOOL, LABEL_GITHUB, LABEL_PNPM } from '../config/constants.js';
+import { CONTAINER_PREFIX, CODER_HOME, LABEL_MANAGED, LABEL_TOOL, LABEL_GITHUB, LABEL_PNPM, LABEL_PLAYWRIGHT } from '../config/constants.js';
 import { ContainerError } from '../utils/errors.js';
 import type { ToolProfile } from '../config/tools.js';
 import { TOOL_PROFILES } from '../config/tools.js';
@@ -22,9 +22,10 @@ vi.mock('./client.js', () => ({
 }));
 
 vi.mock('./image.js', () => ({
-  getImageName: vi.fn((tool: string, options?: { github?: boolean; pnpm?: boolean }) => {
+  getImageName: vi.fn((tool: string, options?: { github?: boolean; pnpm?: boolean; playwright?: boolean }) => {
     let suffix = '';
     if (options?.pnpm) suffix += '-pnpm';
+    if (options?.playwright) suffix += '-playwright';
     if (options?.github) suffix += '-github';
     return `nebubox-${tool}${suffix}:latest`;
   }),
@@ -33,11 +34,13 @@ vi.mock('./image.js', () => ({
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(() => false),
   writeFileSync: vi.fn(),
+  mkdirSync: vi.fn(),
 }));
 
 vi.mock('../config/paths.js', () => ({
   ensureAuthDir: vi.fn((name: string) => `/tmp/fake-auth-dir/${name}`),
   ensureAuthFile: vi.fn((name: string) => `/tmp/fake-auth/${name}`),
+  getNebuboxHome: vi.fn(() => '/tmp/fake-nebubox-home'),
 }));
 
 import { dockerExec, dockerInteractive } from './client.js';
@@ -81,13 +84,21 @@ describe('getContainerName', () => {
   it('appends -pnpm-github suffix when both are true', () => {
     expect(getContainerName('claude', '/home/user/my-project', { pnpm: true, github: true })).toBe(`${CONTAINER_PREFIX}claude-my-project-pnpm-github`);
   });
+
+  it('appends -playwright suffix when playwright is true', () => {
+    expect(getContainerName('claude', '/home/user/my-project', { playwright: true })).toBe(`${CONTAINER_PREFIX}claude-my-project-playwright`);
+  });
+
+  it('appends -pnpm-playwright-github suffix when all are true', () => {
+    expect(getContainerName('claude', '/home/user/my-project', { pnpm: true, playwright: true, github: true })).toBe(`${CONTAINER_PREFIX}claude-my-project-pnpm-playwright-github`);
+  });
 });
 
 describe('containerExists', () => {
   it('returns ContainerInfo when container is found', () => {
     vi.mocked(dockerExec).mockReturnValue({
       status: 0,
-      stdout: 'nebubox-claude-proj\tUp 2 hours\tclaude\tproj\t/home/user/proj\tfalse\tfalse',
+      stdout: 'nebubox-claude-proj\tUp 2 hours\tclaude\tproj\t/home/user/proj\tfalse\tfalse\tfalse',
       stderr: '',
     });
 
@@ -100,6 +111,7 @@ describe('containerExists', () => {
       projectPath: '/home/user/proj',
       github: 'false',
       pnpm: 'false',
+      playwright: 'false',
     });
   });
 
@@ -134,6 +146,14 @@ describe('containerExists', () => {
     expect(format).toBeDefined();
   });
 
+  it('queries the nebubox.playwright label', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: '', stderr: '' });
+    containerExists('test');
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const format = args.find((a: string) => a.includes('nebubox.playwright'));
+    expect(format).toBeDefined();
+  });
+
   it('returns pnpm false for old containers without pnpm label', () => {
     vi.mocked(dockerExec).mockReturnValue({
       status: 0,
@@ -143,6 +163,17 @@ describe('containerExists', () => {
     const info = containerExists('nebubox-claude-proj');
     expect(info).not.toBeNull();
     expect(info!.pnpm).toBe('false');
+  });
+
+  it('returns playwright false for old containers without playwright label', () => {
+    vi.mocked(dockerExec).mockReturnValue({
+      status: 0,
+      stdout: 'nebubox-claude-proj\tUp 2 hours\tclaude\tproj\t/home/user/proj\tfalse\tfalse\t',
+      stderr: '',
+    });
+    const info = containerExists('nebubox-claude-proj');
+    expect(info).not.toBeNull();
+    expect(info!.playwright).toBe('false');
   });
 });
 
@@ -218,6 +249,29 @@ describe('createContainer', () => {
     createContainer(mockProfile, '/home/user/proj', { pnpm: true });
     const args = vi.mocked(dockerExec).mock.calls[0][0];
     expect(args).toContain(`${LABEL_PNPM}=true`);
+  });
+
+  it('sets nebubox.playwright label to false when playwright is not enabled', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj');
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    expect(args).toContain(`${LABEL_PLAYWRIGHT}=false`);
+  });
+
+  it('sets nebubox.playwright label to true when playwright is enabled', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { playwright: true });
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    expect(args).toContain(`${LABEL_PLAYWRIGHT}=true`);
+  });
+
+  it('mounts playwright-cache to /home/coder/.cache/ms-playwright when playwright is enabled', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { playwright: true });
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const vArgs = args.filter((_: string, i: number) => args[i - 1] === '-v');
+    const cacheMount = vArgs.find((v: string) => v.includes('/.cache/ms-playwright'));
+    expect(cacheMount).toBeDefined();
   });
 });
 
@@ -367,7 +421,7 @@ describe('listContainers', () => {
   it('returns parsed container list', () => {
     vi.mocked(dockerExec).mockReturnValue({
       status: 0,
-      stdout: 'c1\tUp\tclaude\tproj1\t/p1\tfalse\tfalse\nc2\tExited\tgemini\tproj2\t/p2\ttrue\tfalse',
+      stdout: 'c1\tUp\tclaude\tproj1\t/p1\tfalse\tfalse\tfalse\nc2\tExited\tgemini\tproj2\t/p2\ttrue\tfalse\tfalse',
       stderr: '',
     });
 
@@ -381,6 +435,7 @@ describe('listContainers', () => {
       projectPath: '/p1',
       github: 'false',
       pnpm: 'false',
+      playwright: 'false',
     });
     expect(list[1]).toEqual({
       name: 'c2',
@@ -390,6 +445,7 @@ describe('listContainers', () => {
       projectPath: '/p2',
       github: 'true',
       pnpm: 'false',
+      playwright: 'false',
     });
   });
 
@@ -434,6 +490,14 @@ describe('listContainers', () => {
     listContainers();
     const args = vi.mocked(dockerExec).mock.calls[0][0];
     const format = args.find((a: string) => a.includes('nebubox.pnpm'));
+    expect(format).toBeDefined();
+  });
+
+  it('queries the nebubox.playwright label', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: '', stderr: '' });
+    listContainers();
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const format = args.find((a: string) => a.includes('nebubox.playwright'));
     expect(format).toBeDefined();
   });
 });

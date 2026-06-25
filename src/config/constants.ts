@@ -4,6 +4,8 @@ export const LABEL_PROJECT = 'nebubox.project';
 export const LABEL_PROJECT_PATH = 'nebubox.project-path';
 export const LABEL_GITHUB = 'nebubox.github';
 export const LABEL_PNPM = 'nebubox.pnpm';
+export const LABEL_PLAYWRIGHT = 'nebubox.playwright';
+
 
 export const IMAGE_PREFIX = 'nebubox-';
 export const CONTAINER_PREFIX = 'nebubox-';
