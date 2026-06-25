@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-06-25
+
+### Fixed
+- Fixed permission denied issues in the Antigravity CLI container by mounting the entire `.gemini` folder instead of `.gemini/antigravity-cli`. This ensures `/home/coder/.gemini` is owned by the container `coder` user instead of the host `root` user.
+
 ## [0.5.0] - 2026-06-25
 
 ### Added
