@@ -1,4 +1,4 @@
-# Nebubox - AI Coding Tools, Safely Contained
+
 
 <p align="center">
   <picture>
@@ -19,6 +19,8 @@
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" />
   </a>
 </p>
+
+# Nebubox - AI Coding Tools, Safely Contained
 
 Run AI coding CLI tools safely inside Docker containers.
 
