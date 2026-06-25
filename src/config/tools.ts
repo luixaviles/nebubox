@@ -66,7 +66,7 @@ const antigravity: ToolProfile = {
   envVars: {
     PATH: '/home/coder/.local/bin:$PATH',
   },
-  authDir: '.config/antigravity',
+  authDir: '.gemini/antigravity-cli',
   authFiles: [],
   hint: 'Run `agy --dangerously-skip-permissions` to start Antigravity CLI.',
 };
