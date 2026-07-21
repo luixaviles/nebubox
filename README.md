@@ -85,6 +85,9 @@ nebubox start ./my-project --tool claude --pnpm
 
 # Start with Playwright browser screenshot support
 nebubox start ./my-project --tool claude --playwright
+
+# Mount extra host paths into the container (repeatable)
+nebubox start ./my-project --tool claude --mount ~/shared-data
 ```
 
 This will:
@@ -99,7 +102,7 @@ When you exit the shell, the container keeps running. Reconnect anytime with `ne
 
 | Command | Description |
 |---------|-------------|
-| `nebubox start <path> [--tool <name>] [--rebuild] [--github] [--pnpm] [--playwright]` | Create/start container and attach shell |
+| `nebubox start <path> [--tool <name>] [--rebuild] [--github] [--pnpm] [--playwright] [--mount <spec>]` | Create/start container and attach shell |
 | `nebubox list [--tool <name>]` | List managed containers |
 | `nebubox stop <name>` | Stop a running container |
 | `nebubox attach <name>` | Attach to a running container |
@@ -321,6 +324,35 @@ nebubox start ./my-project --tool claude --pnpm --playwright --github
 ```bash
 nebubox build claude --playwright
 ```
+
+### Custom Mounts (`--mount`)
+
+By default a container only sees your project directory (at `/home/coder/workspace`) and the tool's auth directory — the rest of the host filesystem stays invisible. Use `--mount` to expose additional host paths inside the container.
+
+The flag takes a spec in the form `<host-path>[:<dest>][:ro|rw]`. The destination is **optional** and defaults to `/home/coder/workspace/<host-basename>` — i.e. alongside your project, right where the shell starts:
+
+- **host path** — a file or directory that must already exist on the host. Relative paths are resolved against the current working directory.
+- **dest** *(optional)* — where to mount it in the container. A bare name (e.g. `renamed.env`) is placed under the workspace (`/home/coder/workspace`); an absolute path (e.g. `/home/coder/.aws` or `/opt/data`) is used verbatim. Omit it to reuse the host basename.
+- **mode** *(optional)* — `ro` (read-only) or `rw` (read-write, the default). When the middle segment is exactly `ro` or `rw` it's interpreted as the mode, not a destination.
+
+It is **repeatable**, so you can add several mounts in one command:
+
+```bash
+# ~/shared-data -> /home/coder/workspace/shared-data
+nebubox start ./my-project --tool claude --mount ~/shared-data
+
+# A data dir alongside the project, and a file mounted read-only under a new name
+nebubox start ./my-project --tool claude \
+  --mount ./fixtures \
+  --mount ~/secrets.env:renamed.env:ro
+
+# Absolute destination for $HOME-relative config that tools expect outside the workspace
+nebubox start ./my-project --tool claude --mount ~/.aws:/home/coder/.aws:ro
+```
+
+> **Note:** The default lands mounts inside the workspace, which is your project directory — they'll appear in `ls` and may show up in `git status`. For credentials/config that tools resolve relative to `$HOME` (e.g. `~/.aws`, `~/.ssh`), give an absolute destination like `/home/coder/.aws`.
+
+> **Note:** Custom mounts are applied when the container is first created. Restarting an existing container reuses its original mounts — pass `--rebuild` to recreate it with a new set of mounts.
 
 ## Development
 

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mkdtempSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { validateProjectPath, validateToolName, ensureDocker } from './validation.js';
+import { validateProjectPath, validateToolName, validateMount, ensureDocker } from './validation.js';
 import { ValidationError, DockerNotFoundError } from './errors.js';
 
 vi.mock('node:child_process', () => ({
@@ -52,6 +52,64 @@ describe('validateToolName', () => {
       expect((e as Error).message).toContain('codex');
       expect((e as Error).message).toContain('antigravity');
     }
+  });
+});
+
+describe('validateMount', () => {
+  it('defaults the container path to /home/coder/workspace/<basename> when only a host is given', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nebubox-vm-'));
+    expect(validateMount(dir)).toBe(`${dir}:/home/coder/workspace/${basename(dir)}`);
+  });
+
+  it('treats a lone ro/rw second segment as the mode, keeping the default destination', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nebubox-vm-'));
+    expect(validateMount(`${dir}:ro`)).toBe(`${dir}:/home/coder/workspace/${basename(dir)}:ro`);
+    expect(validateMount(`${dir}:rw`)).toBe(`${dir}:/home/coder/workspace/${basename(dir)}:rw`);
+  });
+
+  it('places a relative destination under /home/coder/workspace (rename shorthand)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nebubox-vm-'));
+    const file = join(dir, 'secrets.env');
+    writeFileSync(file, 'x');
+    expect(validateMount(`${file}:renamed.env`)).toBe(`${file}:/home/coder/workspace/renamed.env`);
+    expect(validateMount(`${file}:renamed.env:ro`)).toBe(`${file}:/home/coder/workspace/renamed.env:ro`);
+  });
+
+  it('uses an absolute destination verbatim', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nebubox-vm-'));
+    expect(validateMount(`${dir}:/opt/data`)).toBe(`${dir}:/opt/data`);
+    expect(validateMount(`${dir}:/home/coder/data:ro`)).toBe(`${dir}:/home/coder/data:ro`);
+  });
+
+  it('resolves a relative host path to absolute', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nebubox-vm-'));
+    const result = validateMount(`${dir}:/home/coder/data`);
+    expect(result.startsWith('/')).toBe(true);
+  });
+
+  it('accepts an existing host file (not just directories)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nebubox-vm-'));
+    const file = join(dir, 'creds.json');
+    writeFileSync(file, '{}');
+    expect(validateMount(`${file}:ro`)).toBe(`${file}:/home/coder/workspace/creds.json:ro`);
+  });
+
+  it('throws when there are too many segments', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nebubox-vm-'));
+    expect(() => validateMount(`${dir}:/home/coder/data:ro:extra`)).toThrow(ValidationError);
+  });
+
+  it('throws for an invalid mode', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nebubox-vm-'));
+    expect(() => validateMount(`${dir}:/home/coder/data:readonly`)).toThrow(ValidationError);
+  });
+
+  it('throws for an empty spec (missing host path)', () => {
+    expect(() => validateMount('')).toThrow(ValidationError);
+  });
+
+  it('throws when the host path does not exist', () => {
+    expect(() => validateMount('/does/not/exist:/home/coder/data')).toThrow(ValidationError);
   });
 });
 
