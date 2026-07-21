@@ -4,7 +4,7 @@ import { parseArgs } from './parse-args.js';
 describe('parseArgs', () => {
   it('returns empty command and args for no arguments', () => {
     const result = parseArgs(['node', 'nebubox']);
-    expect(result).toEqual({ command: '', args: [], flags: {} });
+    expect(result).toEqual({ command: '', args: [], flags: {}, multiFlags: {} });
   });
 
   it('parses a single command', () => {
@@ -58,5 +58,24 @@ describe('parseArgs', () => {
     expect(result.flags['github']).toBe('true');
     expect(result.flags['rebuild']).toBe('true');
     expect(result.flags['tool']).toBe('claude');
+  });
+
+  it('accumulates repeated flags in multiFlags', () => {
+    const result = parseArgs([
+      'node', 'nebubox', 'start', './proj',
+      '--mount', '/a:/x', '--mount', '/b:/y',
+    ]);
+    expect(result.multiFlags['mount']).toEqual(['/a:/x', '/b:/y']);
+  });
+
+  it('keeps last-wins in flags while collecting all values in multiFlags', () => {
+    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--mount', '/a:/x', '--mount', '/b:/y']);
+    expect(result.flags['mount']).toBe('/b:/y');
+    expect(result.multiFlags['mount']).toEqual(['/a:/x', '/b:/y']);
+  });
+
+  it('records single-occurrence flags in multiFlags too', () => {
+    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--tool', 'claude']);
+    expect(result.multiFlags['tool']).toEqual(['claude']);
   });
 });

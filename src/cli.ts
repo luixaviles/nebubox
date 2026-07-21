@@ -13,7 +13,7 @@ import { parseArgs } from './utils/parse-args.js';
 const VERSION = '0.4.0';
 
 const KNOWN_FLAGS = new Set([
-  'tool', 'rebuild', 'github', 'pnpm', 'playwright', 'help', 'h', 'version', 'v',
+  'tool', 'rebuild', 'github', 'pnpm', 'playwright', 'mount', 'help', 'h', 'version', 'v',
 ]);
 
 function printHelp(): void {
@@ -26,7 +26,7 @@ USAGE
   nebubox <command> [options]
 
 COMMANDS
-  start <path> [--tool <name>] [--rebuild] [--github] [--pnpm] [--playwright]  Create/start container and attach shell
+  start <path> [--tool <name>] [--rebuild] [--github] [--pnpm] [--playwright] [--mount <spec>]  Create/start container and attach shell
   list [--tool <name>]           List managed containers
   stop <name>                    Stop a running container
   attach <name>                  Attach to a running container
@@ -40,6 +40,9 @@ OPTIONS
   --github         Install GitHub CLI and persist auth across sessions
   --pnpm           Install pnpm package manager via corepack
   --playwright     Install Playwright system dependencies and configure persistent host cache
+  --mount <spec>   Add an extra bind mount: <host-path>[:<dest>][:ro|rw]
+                   Repeatable; host path must exist. Destination defaults to
+                   the workspace (relative dest is placed under /home/coder/workspace)
   --help, -h       Show this help message
   --version, -v    Show version
 
@@ -47,6 +50,8 @@ EXAMPLES
   nebubox start ./my-project
   nebubox start ./my-project --tool gemini
   nebubox start ./my-project --tool claude --github
+  nebubox start ./my-project --mount ~/data --mount ~/notes.md:ro
+  nebubox start ./my-project --mount ~/.aws:/home/coder/.aws:ro
   nebubox list
   nebubox list --tool claude
   nebubox stop nebubox-claude-my-project
@@ -68,7 +73,7 @@ function warnUnknownFlags(flags: Record<string, string>): void {
 export async function main(): Promise<void> {
   process.title = `nebubox v${VERSION}`;
 
-  const { command, args, flags } = parseArgs(process.argv);
+  const { command, args, flags, multiFlags } = parseArgs(process.argv);
 
   if (flags['help'] || flags['h'] || command === 'help' || command === '-h') {
     printHelp();
@@ -104,6 +109,7 @@ export async function main(): Promise<void> {
           github: flags['github'] === 'true',
           pnpm: flags['pnpm'] === 'true',
           playwright: flags['playwright'] === 'true',
+          mounts: multiFlags['mount'] ?? [],
         });
         break;
       }

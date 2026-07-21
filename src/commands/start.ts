@@ -12,7 +12,7 @@ import {
   attachContainer,
   getContainerName,
 } from '../docker/container.js';
-import { ensureDocker, validateProjectPath, validateToolName } from '../utils/validation.js';
+import { ensureDocker, validateProjectPath, validateToolName, validateMount } from '../utils/validation.js';
 import { getAuthDir } from '../config/paths.js';
 import * as log from '../utils/logger.js';
 
@@ -23,11 +23,13 @@ export interface StartOptions {
   github: boolean;
   pnpm: boolean;
   playwright: boolean;
+  mounts: string[];
 }
 
 export async function startCommand(opts: StartOptions): Promise<void> {
   validateToolName(opts.tool);
   const projectPath = validateProjectPath(opts.path);
+  const mounts = opts.mounts.map(validateMount);
   ensureDocker();
 
   const profile = getToolProfile(opts.tool)!;
@@ -63,6 +65,13 @@ export async function startCommand(opts: StartOptions): Promise<void> {
   let existing = containerExists(containerName);
 
   if (existing) {
+    if (mounts.length > 0) {
+      log.warn(
+        `Custom mounts only apply when a container is first created. ` +
+        `Existing container ${containerName} keeps its original mounts; ` +
+        `use --rebuild to recreate it with the new mounts.`,
+      );
+    }
     if (isContainerRunning(containerName)) {
       log.info(`Container ${containerName} is already running. Attaching...`);
     } else {
@@ -72,7 +81,7 @@ export async function startCommand(opts: StartOptions): Promise<void> {
     }
   } else {
     log.step(`Creating container ${containerName}...`);
-    createContainer(profile, projectPath, imageOpts);
+    createContainer(profile, projectPath, { ...imageOpts, mounts });
     startContainer(containerName);
     log.success(`Container ${containerName} created and started.`);
   }

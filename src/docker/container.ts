@@ -22,6 +22,8 @@ export interface ContainerOptions {
   github?: boolean;
   pnpm?: boolean;
   playwright?: boolean;
+  /** Extra bind mounts in normalized `host:container[:ro|rw]` form (see validateMount). */
+  mounts?: string[];
 }
 
 export interface ContainerInfo {
@@ -135,6 +137,11 @@ export function createContainer(
     const hostPlaywrightCache = join(getNebuboxHome(), 'playwright-cache');
     mkdirSync(hostPlaywrightCache, { recursive: true });
     createArgs.push('-v', `${hostPlaywrightCache}:${CODER_HOME}/.cache/ms-playwright`);
+  }
+
+  // User-supplied bind mounts (already normalized/validated)
+  for (const mount of options?.mounts ?? []) {
+    createArgs.push('-v', mount);
   }
 
   createArgs.push('-w', WORKSPACE_DIR, imageName);

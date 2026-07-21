@@ -143,6 +143,26 @@ describe('main CLI functionality', () => {
       github: true,
       pnpm: true,
       playwright: true,
+      mounts: [],
+    });
+  });
+
+  it('passes repeated --mount flags through to startCommand', async () => {
+    const { startCommand } = await import('./commands/start.js');
+    process.argv = [
+      'node', 'nebubox', 'start', './my-path', '--tool', 'claude',
+      '--mount', '/host/a:/home/coder/a',
+      '--mount', '/host/b:/home/coder/b:ro',
+    ];
+    await main();
+    expect(startCommand).toHaveBeenCalledWith({
+      path: './my-path',
+      tool: 'claude',
+      rebuild: false,
+      github: false,
+      pnpm: false,
+      playwright: false,
+      mounts: ['/host/a:/home/coder/a', '/host/b:/home/coder/b:ro'],
     });
   });
 
@@ -160,6 +180,7 @@ describe('main CLI functionality', () => {
       github: false,
       pnpm: false,
       playwright: false,
+      mounts: [],
     });
   });
 

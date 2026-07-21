@@ -273,6 +273,33 @@ describe('createContainer', () => {
     const cacheMount = vArgs.find((v: string) => v.includes('/.cache/ms-playwright'));
     expect(cacheMount).toBeDefined();
   });
+
+  it('appends each custom mount as a -v arg', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', {
+      mounts: ['/host/a:/home/coder/a', '/host/b:/home/coder/b:ro'],
+    });
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const vArgs = args.filter((_: string, i: number) => args[i - 1] === '-v');
+    expect(vArgs).toContain('/host/a:/home/coder/a');
+    expect(vArgs).toContain('/host/b:/home/coder/b:ro');
+  });
+
+  it('adds no extra -v args when mounts is empty or omitted', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { mounts: [] });
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    const vCount = args.filter((a: string) => a === '-v').length;
+    // Only project mount + authDir mount (mockProfile has no authFiles)
+    expect(vCount).toBe(2);
+  });
+
+  it('places custom mounts before the -w working-dir arg', () => {
+    vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
+    createContainer(mockProfile, '/home/user/proj', { mounts: ['/host/a:/home/coder/a'] });
+    const args = vi.mocked(dockerExec).mock.calls[0][0];
+    expect(args.indexOf('/host/a:/home/coder/a')).toBeLessThan(args.indexOf('-w'));
+  });
 });
 
 describe('createContainer per provider', () => {

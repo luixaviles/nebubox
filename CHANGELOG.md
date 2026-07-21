@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added a repeatable `--mount <host-path>[:<dest>][:ro|rw]` flag to `nebubox start` for exposing additional host paths inside the container. The destination is optional and defaults to `/home/coder/workspace/<host-basename>` (alongside your project); a relative destination is placed under the workspace, an absolute one is used verbatim. Host paths must exist; mounts are applied when the container is first created (use `--rebuild` to change them on an existing container).
+
 ## [0.5.1] - 2026-06-25
 
 ### Fixed
