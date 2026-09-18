@@ -30,10 +30,10 @@ describe('parseArgs', () => {
   });
 
   it('parses mixed positional args and flags', () => {
-    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--tool', 'gemini', '--rebuild']);
+    const result = parseArgs(['node', 'nebubox', 'start', './proj', '--tool', 'copilot', '--rebuild']);
     expect(result.command).toBe('start');
     expect(result.args).toEqual(['./proj']);
-    expect(result.flags).toEqual({ tool: 'gemini', 'rebuild': 'true' });
+    expect(result.flags).toEqual({ tool: 'copilot', 'rebuild': 'true' });
   });
 
   it('treats flag followed by another flag as boolean', () => {

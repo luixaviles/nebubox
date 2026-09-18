@@ -29,18 +29,20 @@ const claude: ToolProfile = {
   hint: 'Run `claude --dangerously-skip-permissions` to start Claude Code.',
 };
 
-const gemini: ToolProfile = {
-  name: 'gemini',
-  displayName: 'Gemini CLI (Deprecated)',
+const copilot: ToolProfile = {
+  name: 'copilot',
+  displayName: 'GitHub Copilot CLI',
   packages: [],
   installCommands: [
-    'npm install -g @google/gemini-cli',
+    'curl -fsSL https://gh.io/copilot-install | bash',
   ],
-  envVars: {},
-  authDir: '.gemini',
+  envVars: {
+    PATH: '/home/coder/.local/bin:$PATH',
+    COPILOT_HOME: '/home/coder/.copilot',
+  },
+  authDir: '.copilot',
   authFiles: [],
-  hint: 'Run `gemini --approval-mode=yolo --sandbox=false` to start Gemini CLI.',
-  warning: 'Gemini CLI is deprecated and will transition to Antigravity CLI. See https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/',
+  hint: 'Run `copilot --yolo` to start GitHub Copilot CLI. On first login, select "Yes, store in plain text" when prompted.',
 };
 
 const codex: ToolProfile = {
@@ -75,7 +77,7 @@ export const TOOL_PROFILES: Record<string, ToolProfile> = {
   claude,
   antigravity,
   codex,
-  gemini,
+  copilot,
 };
 
 export function getToolProfile(name: string): ToolProfile | undefined {

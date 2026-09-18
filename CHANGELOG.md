@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added support for GitHub Copilot CLI via `--tool copilot`, installed using the official standalone installer (`curl -fsSL https://gh.io/copilot-install | bash`). Includes auth and configuration persistence mapped to `~/.nebubox/auth/copilot/` (`COPILOT_HOME`).
+
+### Removed
+- Removed deprecated Gemini CLI (`gemini`) tool support across profiles, CLI options, tests, and documentation in favor of Antigravity CLI (`antigravity`).
+
 ## [0.5.1] - 2026-06-25
 
 ### Fixed

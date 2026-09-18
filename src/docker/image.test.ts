@@ -25,7 +25,7 @@ const mockProfile: ToolProfile = {
 describe('getImageName', () => {
   it('returns prefixed image name with :latest tag', () => {
     expect(getImageName('claude')).toBe(`${IMAGE_PREFIX}claude:latest`);
-    expect(getImageName('gemini')).toBe(`${IMAGE_PREFIX}gemini:latest`);
+    expect(getImageName('copilot')).toBe(`${IMAGE_PREFIX}copilot:latest`);
   });
 
   it('appends -github suffix when github is true', () => {

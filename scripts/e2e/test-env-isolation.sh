@@ -74,7 +74,7 @@ fi
 # "Cannot find module" because Node used the stale prefix for resolution.
 # The fix: NPM_CONFIG_PREFIX is now a Docker ARG (build-time only).
 
-TOOL="gemini"
+TOOL="codex"
 IMAGE_NAME="nebubox-${TOOL}:latest"
 CLEANUP_IMAGES+=("$IMAGE_NAME")
 
@@ -98,19 +98,19 @@ assert_output_contains \
 # ── Tool binary is discoverable via PATH ─────────────
 
 assert_ok "tool binary is in PATH" \
-  docker run --rm "$IMAGE_NAME" -c "which gemini"
+  docker run --rm "$IMAGE_NAME" -c "which codex"
 
 # ── npm package directory exists ─────────────────────
 
 assert_ok "npm package exists in .npm-global" \
-  docker run --rm "$IMAGE_NAME" -c "test -d /home/coder/.npm-global/lib/node_modules/@google/gemini-cli"
+  docker run --rm "$IMAGE_NAME" -c "test -d /home/coder/.npm-global/lib/node_modules/@openai/codex"
 
 # ── Tool starts without module resolution errors ─────
 # This is the exact failure mode: the tool binary runs but Node.js
 # cannot find the backing module, producing "Cannot find module ...".
 
 set +e
-output=$(docker run --rm "$IMAGE_NAME" -c "gemini --help 2>&1 || true")
+output=$(docker run --rm "$IMAGE_NAME" -c "codex --help 2>&1 || true")
 set -e
 
 if echo "$output" | grep -q "Cannot find module"; then

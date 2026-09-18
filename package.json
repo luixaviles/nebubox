@@ -26,8 +26,10 @@
     "cli",
     "ai",
     "claude",
-    "gemini",
+    "antigravity",
     "codex",
+    "copilot",
+    "github-copilot",
     "sandbox"
   ],
   "repository": {

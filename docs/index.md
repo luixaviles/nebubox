@@ -1,12 +1,12 @@
 ---
 layout: default
 title: Nebubox — AI Coding Tools, Safely Contained
-description: Run AI coding CLI tools like Claude Code, Gemini CLI, and Codex safely inside Docker containers with filesystem isolation.
+description: Run AI coding CLI tools like Claude Code, GitHub Copilot CLI, and Codex safely inside Docker containers with filesystem isolation.
 ---
 
 ## Key Features
 
-- **Multi-tool support** — Claude Code, Antigravity CLI, Codex CLI, and Gemini CLI out of the box
+- **Multi-tool support** — Claude Code, Antigravity CLI, Codex CLI, and GitHub Copilot CLI out of the box
 - **Filesystem isolation** — only the mounted project directory is accessible
 - **Auth persistence** — credentials survive across container restarts via shared host directories
 - **Zero runtime dependencies** — just Node.js and Docker
@@ -26,7 +26,7 @@ description: Run AI coding CLI tools like Claude Code, Gemini CLI, and Codex saf
 | Claude Code | `claude --dangerously-skip-permissions` |
 | Antigravity CLI | `agy --dangerously-skip-permissions` |
 | Codex CLI | `codex --dangerously-bypass-approvals-and-sandbox` |
-| Gemini CLI (Deprecated) | `gemini --approval-mode=yolo --sandbox=false` |
+| GitHub Copilot CLI | `copilot --yolo` |
 
 When `--tool` is omitted, Nebubox presents an interactive prompt to select a tool.
 
@@ -40,7 +40,7 @@ nebubox start ./my-project
 nebubox start ./my-project --tool claude
 nebubox start ./my-project --tool antigravity
 nebubox start ./my-project --tool codex
-nebubox start ./my-project --tool gemini
+nebubox start ./my-project --tool copilot
 
 # Start with GitHub CLI support
 nebubox start ./my-project --tool claude --github
@@ -71,10 +71,12 @@ Containers are named `nebubox-<tool>-<project-dir>` (or `nebubox-<tool>-<project
     claude/         # Claude Code credentials & config
     antigravity/    # Antigravity CLI credentials (shared)
     codex/          # Codex CLI credentials
-    gemini/         # Gemini CLI credentials
+    copilot/        # GitHub Copilot CLI credentials (~/.copilot)
     github/         # GitHub CLI auth + .gitconfig (when --github is used)
   playwright-cache/ # Playwright browser cache (when --playwright is used)
 ```
+
+> **Note for GitHub Copilot CLI**: On first login, select *"Yes, store in plain text"* when prompted about the system vault. Storing credentials in `~/.copilot/config.json` allows them to persist safely in `~/.nebubox/auth/copilot/` across container runs.
 
 ## GitHub CLI Integration
 

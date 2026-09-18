@@ -37,8 +37,8 @@ describe('ensureAuthDir', () => {
 
   it('is idempotent', () => {
     withIsolatedHome(() => {
-      const first = ensureAuthDir('gemini');
-      const second = ensureAuthDir('gemini');
+      const first = ensureAuthDir('copilot');
+      const second = ensureAuthDir('copilot');
       expect(first).toBe(second);
       expect(existsSync(first)).toBe(true);
     });

@@ -45,7 +45,7 @@ OPTIONS
 
 EXAMPLES
   nebubox start ./my-project
-  nebubox start ./my-project --tool gemini
+  nebubox start ./my-project --tool copilot
   nebubox start ./my-project --tool claude --github
   nebubox list
   nebubox list --tool claude

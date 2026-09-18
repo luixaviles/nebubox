@@ -62,7 +62,7 @@ describe('getContainerName', () => {
   });
 
   it('uses only the basename of the path', () => {
-    expect(getContainerName('gemini', '/a/b/c/deep-project')).toBe(`${CONTAINER_PREFIX}gemini-deep-project`);
+    expect(getContainerName('copilot', '/a/b/c/deep-project')).toBe(`${CONTAINER_PREFIX}copilot-deep-project`);
   });
 
   it('appends -github suffix when github is true', () => {
@@ -302,9 +302,9 @@ describe('createContainer per provider', () => {
 
   it('does not add auth file mounts when authFiles is empty', () => {
     vi.mocked(dockerExec).mockReturnValue({ status: 0, stdout: 'abc', stderr: '' });
-    // Use gemini profile which has empty authFiles
-    const geminiProfile = TOOL_PROFILES['gemini'];
-    createContainer(geminiProfile, '/home/user/proj');
+    // Use copilot profile which has empty authFiles
+    const copilotProfile = TOOL_PROFILES['copilot'];
+    createContainer(copilotProfile, '/home/user/proj');
 
     const args = vi.mocked(dockerExec).mock.calls[0][0];
     const vCount = args.filter((a: string) => a === '-v').length;
@@ -421,7 +421,7 @@ describe('listContainers', () => {
   it('returns parsed container list', () => {
     vi.mocked(dockerExec).mockReturnValue({
       status: 0,
-      stdout: 'c1\tUp\tclaude\tproj1\t/p1\tfalse\tfalse\tfalse\nc2\tExited\tgemini\tproj2\t/p2\ttrue\tfalse\tfalse',
+      stdout: 'c1\tUp\tclaude\tproj1\t/p1\tfalse\tfalse\tfalse\nc2\tExited\tcopilot\tproj2\t/p2\ttrue\tfalse\tfalse',
       stderr: '',
     });
 
@@ -440,7 +440,7 @@ describe('listContainers', () => {
     expect(list[1]).toEqual({
       name: 'c2',
       status: 'Exited',
-      tool: 'gemini',
+      tool: 'copilot',
       project: 'proj2',
       projectPath: '/p2',
       github: 'true',

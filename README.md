@@ -28,7 +28,7 @@ Running AI coding tools with full permissions is powerful but risky: a single ba
 
 ## Features
 
-- **Multi-tool support** — Claude Code, Antigravity CLI, Codex CLI, and Gemini CLI out of the box
+- **Multi-tool support** — Claude Code, Antigravity CLI, Codex CLI, and GitHub Copilot CLI out of the box
 - **Filesystem isolation** — only the mounted project directory is accessible
 - **Auth persistence** — credentials survive across container restarts via shared host directories
 - **Zero runtime dependencies** — just Node.js and Docker
@@ -75,7 +75,7 @@ nebubox start ./my-project
 nebubox start ./my-project --tool claude
 nebubox start ./my-project --tool antigravity
 nebubox start ./my-project --tool codex
-nebubox start ./my-project --tool gemini
+nebubox start ./my-project --tool copilot
 
 # Start with GitHub CLI support
 nebubox start ./my-project --tool claude --github
@@ -113,7 +113,7 @@ When you exit the shell, the container keeps running. Reconnect anytime with `ne
 | `claude` | `claude --dangerously-skip-permissions` |
 | `antigravity` | `agy --dangerously-skip-permissions` |
 | `codex` | `codex --dangerously-bypass-approvals-and-sandbox` |
-| `gemini` (Deprecated) | `gemini --approval-mode=yolo --sandbox=false` |
+| `copilot` | `copilot --yolo` |
 
 When `--tool` is omitted, nebubox presents an interactive prompt to select a tool.
 
@@ -138,9 +138,9 @@ Containers are named `nebubox-<tool>-<project-dir>` with optional suffixes (`-pn
 ~/.nebubox/
   auth/
     claude/         # Claude Code credentials & config (~/.claude)
-    antigravity/    # Antigravity CLI credentials
-    codex/          # Codex CLI credentials
-    gemini/         # Gemini CLI credentials
+    antigravity/    # Antigravity CLI credentials (~/.gemini)
+    codex/          # Codex CLI credentials (~/.codex)
+    copilot/        # GitHub Copilot CLI credentials (~/.copilot)
     github/         # GitHub CLI auth + .gitconfig (when --github is used)
 ```
 
@@ -149,8 +149,9 @@ Containers are named `nebubox-<tool>-<project-dir>` with optional suffixes (`-pn
 Nebubox stores each tool's credentials under `~/.nebubox/auth/<tool>/` on the host instead of sharing your existing config directories. The first time you start a container for a tool, authenticate inside it — after that, all containers for that tool reuse the same credentials regardless of which project they belong to.
 
 - **Claude Code** — Nebubox sets `CLAUDE_CONFIG_DIR` to point to the mounted auth directory, so all config (`.claude.json`, `.credentials.json`, settings) lives in a single volume. This avoids [credential conflicts](https://github.com/anthropics/claude-code/issues/1414) between macOS and Linux. Run `claude login` on first use.
-- **Gemini CLI** — Auth is stored in the standard `.gemini` directory. Note that Gemini re-execs itself after login, so `NPM_CONFIG_PREFIX` is set at build-time only to avoid module resolution issues. Run `gemini` and follow the login prompt on first use.
+- **Antigravity CLI** — Auth is stored in the standard `.gemini` directory. Credentials persist across containers under `~/.nebubox/auth/antigravity/`.
 - **Codex CLI** — Auth is stored in the standard `.codex` directory. Run `codex` and follow the login prompt on first use.
+- **GitHub Copilot CLI** — Auth and configuration are stored in the mounted `.copilot` directory (`COPILOT_HOME`). When authenticating on first use (`/login` or `copilot login`), select **"Yes, store in plain text"** when prompted about the system vault. Because this is an isolated container without a desktop keyring daemon, storing credentials in `config.json` allows them to persist across container runs under `~/.nebubox/auth/copilot/` on your host.
 - **GitHub CLI** (`--github`) — When you pass `--github`, Nebubox installs `gh` in the container image and mounts `~/.nebubox/auth/github/` for credential persistence. Run `gh auth login` on first use. Your git identity (`user.name` and `user.email`) is automatically configured from your GitHub account on the next shell session.
 
 If you need to pick up configuration changes (e.g., after updating nebubox), rebuild your containers:
@@ -162,8 +163,8 @@ nebubox start ./my-project --tool claude --rebuild
 ## Examples
 
 ```bash
-# Build the Gemini image ahead of time
-nebubox build gemini
+# Build the Copilot image ahead of time
+nebubox build copilot
 
 # Rebuild image and recreate container
 nebubox build claude --rebuild
@@ -184,8 +185,8 @@ nebubox start ~/projects/backend --tool claude
 # List all managed containers
 nebubox list
 
-# List only Gemini containers
-nebubox list --tool gemini
+# List only Copilot containers
+nebubox list --tool copilot
 
 # Reconnect to a container
 nebubox attach nebubox-claude-frontend
