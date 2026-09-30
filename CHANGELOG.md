@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-09-30
+
+### Fixed
+- Fixed permission denied error when running GitHub Copilot CLI (or any tool) alongside `--playwright`. The `/home/coder/.cache` directory was being created as root by Docker when mounting the Playwright browser cache volume, preventing the `coder` user from writing subdirectories like `.cache/copilot`. The image now pre-creates `/home/coder/.cache` as the `coder` user.
+
 ## [0.6.0] - 2026-09-18
 
 ### Added

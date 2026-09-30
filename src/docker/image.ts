@@ -88,6 +88,7 @@ export function generateDockerfile(profile: ToolProfile, options?: ImageOptions)
 
   lines.push(`USER ${CODER_USER}`);
   lines.push(`WORKDIR ${CODER_HOME}`);
+  lines.push(`RUN mkdir -p ${CODER_HOME}/.cache`);
   lines.push('');
 
   // Point git at a config file inside the mounted gh dir so that
